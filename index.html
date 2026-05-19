@@ -1,592 +1,468 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Blue Lock Impact - Multiplayer Rework</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            user-select: none;
-        }
-
-        body {
-            background: #0a0a0a;
-            overflow: hidden;
-            font-family: 'Arial', sans-serif;
-        }
-
-        #gameContainer {
-            position: relative;
-            width: 100vw;
-            height: 100vh;
-        }
-
-        canvas {
-            display: block;
-            position: absolute;
-            top: 0;
-            left: 0;
-        }
-
-        #menu {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.95);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            z-index: 1000;
-            overflow-y: auto;
-            padding: 20px;
-        }
-
-        #menu h1 {
-            color: #00ffff;
-            font-size: 42px;
-            margin-bottom: 10px;
-            text-shadow: 0 0 20px rgba(0, 255, 255, 0.5);
-        }
-
-        .subtitle {
-            color: #aaa;
-            font-size: 18px;
-            margin-bottom: 20px;
-        }
-
-        .char-grid {
-            display: grid;
-            grid-template-columns: repeat(5, 1fr);
-            gap: 12px;
-            padding: 10px;
-            max-width: 1300px;
-        }
-
-        .char-card {
-            background: #111;
-            border: 3px solid #333;
-            padding: 10px;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: all 0.2s;
-            text-align: center;
-        }
-
-        .char-card:hover {
-            border-color: #00ffff;
-            transform: scale(1.02);
-        }
-
-        .char-card.selected {
-            border-color: #ff3300;
-            box-shadow: 0 0 20px rgba(255, 51, 0, 0.4);
-        }
-
-        .char-card h3 {
-            color: white;
-            font-size: 16px;
-        }
-
-        .char-card p {
-            color: #888;
-            font-size: 10px;
-            white-space: pre-wrap;
-        }
-
-        .btn {
-            background: #00ffff;
-            color: #000;
-            padding: 10px 25px;
-            border: none;
-            border-radius: 5px;
-            font-size: 16px;
-            font-weight: bold;
-            cursor: pointer;
-            margin: 5px;
-            transition: 0.2s;
-        }
-
-        .btn:hover { background: #00cccc; transform: scale(1.02); }
-        .btn:disabled { background: #222; color: #555; cursor: not-allowed; }
-
-        #roomInfo { color: white; font-size: 20px; margin: 10px 0; display: flex; gap: 10px; align-items: center; }
-        #copyBtn { background: #222; color: #00ffff; border: 1px solid #00ffff; padding: 4px 12px; cursor: pointer; border-radius: 4px; }
-        #playersList { color: #aaa; margin: 10px; font-size: 16px; }
-        #score { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); color: white; font-size: 48px; font-weight: bold; z-index: 10; text-shadow: 0 0 10px black; display: none; }
-        input { background: #111; color: white; border: 2px solid #333; padding: 8px; border-radius: 5px; width: 150px; text-align: center; }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Blue Lock Impact 2026 — Все способности</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      background: #0a0a0a;
+      overflow: hidden;
+      font-family: 'Arial', sans-serif;
+      user-select: none;
+    }
+    #gameContainer {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+    }
+    canvas {
+      display: block;
+      position: absolute;
+      top: 0;
+      left: 0;
+    }
+    #menu {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.95);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+    #menu h1 {
+      color: #00ffff;
+      font-size: 44px;
+      margin-bottom: 10px;
+      text-shadow: 0 0 20px rgba(0,255,255,0.5);
+    }
+    .subtitle {
+      color: #aaa;
+      font-size: 18px;
+      margin-bottom: 25px;
+    }
+    .char-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 10px;
+      padding: 10px;
+      max-width: 1200px;
+    }
+    .char-card {
+      background: #111;
+      border: 3px solid #333;
+      padding: 10px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: 0.2s;
+      text-align: center;
+    }
+    .char-card:hover {
+      border-color: #00ffff;
+      transform: scale(1.02);
+    }
+    .char-card.selected {
+      border-color: #ff3300;
+      box-shadow: 0 0 20px rgba(255,51,0,0.4);
+    }
+    .char-card h3 {
+      color: white;
+      font-size: 18px;
+      margin-bottom: 5px;
+    }
+    .char-card p {
+      color: #888;
+      font-size: 11px;
+    }
+    .btn {
+      background: #00ffff;
+      color: #000;
+      padding: 12px 30px;
+      border: none;
+      border-radius: 5px;
+      font-weight: bold;
+      cursor: pointer;
+      margin: 8px;
+      transition: 0.3s;
+    }
+    .btn:disabled {
+      background: #222;
+      color: #555;
+      cursor: not-allowed;
+    }
+    #roomInfo {
+      color: white;
+      margin: 12px 0;
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+    #copyBtn {
+      background: #222;
+      color: #00ffff;
+      border: 1px solid #00ffff;
+      padding: 5px 15px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    #score {
+      position: absolute;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      color: white;
+      font-size: 60px;
+      font-weight: bold;
+      z-index: 10;
+      text-shadow: 0 0 20px black;
+    }
+  </style>
 </head>
 <body>
 <div id="gameContainer">
-    <canvas id="gameCanvas"></canvas>
-    <div id="menu">
-        <h1>BLUE LOCK IMPACT</h1>
-        <p class="subtitle">Выбери персонажа | W/↑ — способность | Пробел — удар</p>
-        <div id="roomInfo" style="display:none;"><span>Комната: <span id="roomId"></span></span><button id="copyBtn">Копировать</button></div>
-        <div class="char-grid" id="charGrid"></div>
-        <div id="playersList"></div>
-        <div>
-            <button class="btn" id="createRoomBtn">Создать комнату</button>
-            <button class="btn" id="joinRoomBtn">Присоединиться</button>
-            <input type="text" id="roomInput" placeholder="ID комнаты" maxlength="8">
-            <button class="btn" id="startGameBtn" disabled>Начать игру</button>
-        </div>
+  <canvas id="gameCanvas"></canvas>
+  <div id="menu">
+    <h1>BLUE LOCK IMPACT 2026</h1>
+    <p class="subtitle">Выберите персонажа и создайте комнату</p>
+    <div id="roomInfo" style="display:none;">
+      <span>Комната: <span id="roomId" style="color:#00ffff;font-weight:bold;"></span></span>
+      <button id="copyBtn">Копировать</button>
     </div>
-    <div id="score">0 : 0</div>
+    <div class="char-grid" id="charGrid"></div>
+    <div id="playersList" style="color:#aaa;margin:12px 0;font-weight:bold;"></div>
+    <div>
+      <button class="btn" id="createRoomBtn">Создать комнату</button>
+      <button class="btn" id="joinRoomBtn">Присоединиться</button>
+      <input type="text" id="roomInput" placeholder="ID комнаты" style="padding:12px;background:#111;color:white;border:2px solid #333;border-radius:5px;width:140px;text-transform:uppercase;">
+      <button class="btn" id="startGameBtn" disabled>Начать игру</button>
+    </div>
+  </div>
+  <div id="score" style="display:none;">0 : 0</div>
 </div>
 
 <script type="module">
-    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
-    import { getDatabase, ref, set, onValue, update, get } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
+  import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+  import { getDatabase, ref, set, onValue, update, get } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
 
-    const firebaseConfig = {
-        apiKey: "AIzaSyA2ozhqxlAM-_Hy9p0W3Vc4L-T83P4b3dM",
-        authDomain: "bluelock-1d9bb.firebaseapp.com",
-        databaseURL: "https://bluelock-1d9bb-default-rtdb.firebaseio.com",
-        projectId: "bluelock-1d9bb",
-        storageBucket: "bluelock-1d9bb.firebasestorage.app",
-        messagingSenderId: "1021397810745",
-        appId: "1:1021397810745:web:687341d15a647a25a997e8"
-    };
-    const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
+  const firebaseConfig = {
+    apiKey: "AIzaSyA2ozhqxlAM-_Hy9p0W3Vc4L-T83P4b3dM",
+    authDomain: "bluelock-1d9bb.firebaseapp.com",
+    databaseURL: "https://bluelock-1d9bb-default-rtdb.firebaseio.com",
+    projectId: "bluelock-1d9bb",
+    storageBucket: "bluelock-1d9bb.firebasestorage.app",
+    messagingSenderId: "1021397810745",
+    appId: "1:1021397810745:web:687341d15a647a25a997e8"
+  };
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
 
-    // ========== ПОЛНОСТЬЮ ПЕРЕРАБОТАННЫЕ ПЕРСОНАЖИ ==========
-    const CHARACTERS = {
-        "Hulk": { name: "ХАЛК", baseRadius: 45, color: "#2e7d32", cd: 8, desc: "W: Гигантизм x2 (4сек) + отталкивание врага + трещины" },
-        "Isagi": { name: "ИСАГИ", baseRadius: 35, color: "#0d47a1", cd: 10, desc: "W: Щит ворот 2.5сек + скорость x1.6 + усиленный удар" },
-        "Rin": { name: "РИН", baseRadius: 35, color: "#880e4f", cd: 10, desc: "W: Увеличение чужих ворот + стан врага + кривой удар" },
-        "Pudge": { name: "ПУДЖ", baseRadius: 40, color: "#5d4037", cd: 7, desc: "W: ROT(замедление) или HOOK(крюк) к мячу/врагу" },
-        "Aiku": { name: "АЙКУ", baseRadius: 38, color: "#1b5e20", cd: 12, desc: "W: Телепорт к мячу на своей половине + заморозка 2сек" },
-        "Kaiser": { name: "КАЙЗЕР", baseRadius: 36, color: "#ffb300", cd: 10, desc: "W: Двойной рывок + сила удара 58" },
-        "Nagi": { name: "НАГИ", baseRadius: 37, color: "#6a1b9a", cd: 12, desc: "W: BlackHole или Revolver (по шкале голов)" },
-        "Dio": { name: "ДИО", baseRadius: 38, color: "#c0ca33", cd: 20, desc: "W: The World (тайм-стоп) или Checkmate (ножи+удар)" },
-        "Naruto": { name: "НАРУТО", baseRadius: 37, color: "#ff8f00", cd: 12, desc: "W: Аура хвостов + контратака при отборе" },
-        "Maharaga": { name: "МАХАРАГА", baseRadius: 38, color: "#8d6e63", cd: 3, desc: "W: Смена режима (скорость/размер/рывок)" }
-    };
+  const CHARACTERS = {
+    Hulk: { name: "ХАЛК", color: "#2e7d32", baseRadius: 45, cd: 8, desc: "Гигантизм x2, отталкивание" },
+    Isagi: { name: "ИСАГИ", color: "#0d47a1", baseRadius: 35, cd: 10, desc: "Мета-видение, щит, траектория" },
+    Rin: { name: "РИН", color: "#4a148c", baseRadius: 35, cd: 10, desc: "Кручёные удары, увеличение ворот" },
+    Pudge: { name: "ПУДЖ", color: "#4e342e", baseRadius: 40, cd: 7, desc: "Крюк, ROT-замедление" },
+    Aiku: { name: "АЙКУ", color: "#1b5e20", baseRadius: 38, cd: 12, desc: "Телепорт к мячу, заморозка" },
+    Kaiser: { name: "КАЙЗЕР", color: "#b71c1c", baseRadius: 36, cd: 10, desc: "Двойной рывок, мощный удар" },
+    Nagi: { name: "НАГИ", color: "#ffffff", baseRadius: 37, cd: 12, desc: "Ловушка / 5-зарядный револьвер" },
+    Dio: { name: "ДИО", color: "#ffd600", baseRadius: 38, cd: 20, desc: "THE WORLD / Checkmate ножи" },
+    Naruto: { name: "НАРУТО", color: "#ff9800", baseRadius: 37, cd: 12, desc: "Каунтер, аура хвостов" },
+    Maharaga: { name: "МАХАРАГА", color: "#9c27b0", baseRadius: 38, cd: 3, desc: "Адаптация: скорость/размер/рывок" }
+  };
 
-    let gameState = {
-        roomId: null, playerId: null, selectedChar: null, gameStarted: false,
-        canvas: null, ctx: null, keys: {}, players: {}, ball: { x: 0, y: 0, dx: 0, dy: 0, radius: 24, dribbler: null },
-        gks: { blue: { y: 0, radius: 30, color: "#29b6f6" }, red: { y: 0, radius: 30, color: "#ef5350" } },
-        score: [0,0], lastUpdateTime: 0, goalHeight: 450, globalFreezeUntil: 0,
-        pudgeFlies: [], nagiCharge: 0, nagiGoalPhrase: false, maharagaMode: 0, maharagaDash: false, rinActive: false
-    };
+  let game = {
+    roomId: null, playerId: null, selectedChar: null, started: false,
+    canvas: null, ctx: null, keys: {},
+    players: {
+      player1: { x: 0, y: 0, angle: 0, radius: 35, speed: 11, dribbling: false, color: '#0d47a1', charType: 'Isagi', auraActive: false, cdUntil: 0, stunnedUntil: 0, skillTime: 0, skillType: "", nagiCharge: 0, dioKnives: 0, maharagaMode: 0 },
+      player2: { x: 0, y: 0, angle: Math.PI, radius: 35, speed: 11, dribbling: false, color: '#b71c1c', charType: 'Isagi', auraActive: false, cdUntil: 0, stunnedUntil: 0, skillTime: 0, skillType: "", nagiCharge: 0, dioKnives: 0, maharagaMode: 0 }
+    },
+    gks: {
+      blue: { y: window.innerHeight/2, radius: 30, color: '#29b6f6' },
+      red: { y: window.innerHeight/2, radius: 30, color: '#ef5350' }
+    },
+    ball: { x: 0, y: 0, dx: 0, dy: 0, radius: 24, dribbler: null, curve: 0 },
+    score: [0, 0],
+    freezeUntil: 0,
+    lastUpdate: 0
+  };
 
-    // Вспомогательные функции
-    function distance(a,b) { return Math.hypot(a.x-b.x, a.y-b.y); }
-    
-    // Инициализация меню
-    function initMenu() {
-        const grid = document.getElementById('charGrid');
-        for (const [key, ch] of Object.entries(CHARACTERS)) {
-            const card = document.createElement('div');
-            card.className = 'char-card';
-            card.innerHTML = `<h3>${ch.name}</h3><p>${ch.desc}</p>`;
-            card.onclick = () => { document.querySelectorAll('.char-card').forEach(c=>c.classList.remove('selected')); card.classList.add('selected'); gameState.selectedChar = key; };
-            grid.appendChild(card);
-        }
-        document.getElementById('createRoomBtn').onclick = createRoom;
-        document.getElementById('joinRoomBtn').onclick = joinRoom;
-        document.getElementById('startGameBtn').onclick = startGame;
-        document.getElementById('copyBtn').onclick = () => { const id = document.getElementById('roomId').innerText; if(id) navigator.clipboard.writeText(id); alert("Скопировано!"); };
-    }
+  document.getElementById('copyBtn').onclick = () => {
+    const rid = document.getElementById('roomId').textContent;
+    if (rid) navigator.clipboard.writeText(rid).then(() => {
+      const b = document.getElementById('copyBtn'); b.textContent = 'Скопировано!'; setTimeout(() => b.textContent = 'Копировать', 2000);
+    });
+  };
 
-    async function createRoom() { if(!gameState.selectedChar) return alert("Выбери персонажа!");
-        const roomId = Math.random().toString(36).substring(2,8).toUpperCase();
-        gameState.roomId = roomId; gameState.playerId = 'player1';
-        await set(ref(db, `rooms/${roomId}`), { player1: { char: gameState.selectedChar, ready: true }, player2: null, status: 'waiting' });
-        document.getElementById('roomId').innerText = roomId; document.getElementById('roomInfo').style.display = 'flex';
-        document.getElementById('createRoomBtn').disabled = true; document.getElementById('joinRoomBtn').disabled = true;
-        listenForOpponent(); listenForGameStart();
+  function initMenu() {
+    const grid = document.getElementById('charGrid');
+    grid.innerHTML = '';
+    for (const [key, c] of Object.entries(CHARACTERS)) {
+      const card = document.createElement('div');
+      card.className = 'char-card';
+      card.innerHTML = `<h3>${c.name}</h3><p>${c.desc}</p>`;
+      card.onclick = () => { document.querySelectorAll('.char-card').forEach(el=>el.classList.remove('selected')); card.classList.add('selected'); game.selectedChar = key; };
+      grid.appendChild(card);
     }
-    async function joinRoom() { if(!gameState.selectedChar) return alert("Выбери персонажа!");
-        const roomId = document.getElementById('roomInput').value.toUpperCase();
-        if(!roomId) return;
-        const snap = await get(ref(db, `rooms/${roomId}`));
-        if(!snap.exists()) return alert("Нет комнаты");
-        if(snap.val().player2) return alert("Занято");
-        gameState.roomId = roomId; gameState.playerId = 'player2';
-        await update(ref(db, `rooms/${roomId}`), { player2: { char: gameState.selectedChar, ready: true }, status: 'ready' });
-        document.getElementById('roomId').innerText = roomId; document.getElementById('roomInfo').style.display = 'flex';
-        document.getElementById('createRoomBtn').disabled = true; document.getElementById('joinRoomBtn').disabled = true;
-        listenForGameStart();
-    }
-    function listenForOpponent() { onValue(ref(db, `rooms/${gameState.roomId}`), snap=>{ if(snap.val()?.player2) document.getElementById('startGameBtn').disabled = false; }); }
-    function listenForGameStart() { onValue(ref(db, `rooms/${gameState.roomId}`), snap=>{ if(snap.val()?.status === 'playing' && !gameState.gameStarted) { document.getElementById('menu').style.display = 'none'; document.getElementById('score').style.display = 'block'; initGame(snap.val()); } }); }
-    async function startGame() {
-        const snap = await get(ref(db, `rooms/${gameState.roomId}`));
-        const data = snap.val();
-        if(!data?.player2) return alert("Нет второго игрока");
-        const SW = window.innerWidth, SH = window.innerHeight;
-        await update(ref(db, `rooms/${gameState.roomId}`), {
-            status: 'playing', score: [0,0], ball: { x: SW/2, y: SH/2, dx:0, dy:0, radius:24, dribbler:null },
-            gks: { blue: { y: SH/2 }, red: { y: SH/2 } },
-            players: {
-                player1: { x: SW*0.2, y: SH/2, angle:0, charType: data.player1.char, radius: CHARACTERS[data.player1.char].baseRadius, speed:11, dribbling:false, auraActive:false, cdUntil:0, stunnedUntil:0, skillActive:0, skillType:"", extraData:{} },
-                player2: { x: SW*0.8, y: SH/2, angle:Math.PI, charType: data.player2.char, radius: CHARACTERS[data.player2.char].baseRadius, speed:11, dribbling:false, auraActive:false, cdUntil:0, stunnedUntil:0, skillActive:0, skillType:"", extraData:{} }
-            }
-        });
-    }
+    document.getElementById('createRoomBtn').onclick = createRoom;
+    document.getElementById('joinRoomBtn').onclick = joinRoom;
+    document.getElementById('startGameBtn').onclick = startGame;
+  }
 
-    function initGame(roomData) {
-        gameState.gameStarted = true;
-        gameState.canvas = document.getElementById('gameCanvas');
-        gameState.ctx = gameState.canvas.getContext('2d');
-        gameState.canvas.width = window.innerWidth; gameState.canvas.height = window.innerHeight;
-        gameState.ball = roomData.ball; gameState.score = roomData.score; gameState.players = roomData.players;
-        gameState.gks.blue.y = roomData.gks?.blue.y || gameState.canvas.height/2;
-        gameState.gks.red.y = roomData.gks?.red.y || gameState.canvas.height/2;
-        gameState.goalHeight = 450;
-        setupControls();
-        listenForGameUpdates();
-        gameLoop();
-    }
+  async function createRoom() {
+    if (!game.selectedChar) return alert('Выберите персонажа!');
+    game.roomId = Math.random().toString(36).substring(2,8).toUpperCase();
+    game.playerId = 'player1';
+    await set(ref(db, `rooms/${game.roomId}`), {
+      player1: { char: game.selectedChar, ready: true }, player2: null, status: 'waiting'
+    });
+    document.getElementById('roomId').textContent = game.roomId;
+    document.getElementById('roomInfo').style.display = 'flex';
+    document.getElementById('createRoomBtn').disabled = true;
+    document.getElementById('joinRoomBtn').disabled = true;
+    listenForOpponent(); listenForGameStart();
+  }
 
-    function setupControls() {
-        document.addEventListener('keydown', (e) => {
-            gameState.keys[e.key] = true;
-            if (e.key === ' ') handleKick();
-            if (e.key === 'w' || e.key === 'W' || e.key === 'ArrowUp') handleAbility();
-        });
-        document.addEventListener('keyup', (e) => { gameState.keys[e.key] = false; });
-    }
+  async function joinRoom() {
+    if (!game.selectedChar) return alert('Выберите персонажа!');
+    const rid = document.getElementById('roomInput').value.toUpperCase();
+    if (!rid) return alert('Введите ID!');
+    const snap = await get(ref(db, `rooms/${rid}`));
+    if (!snap.exists()) return alert('Комната не найдена!');
+    if (snap.val().player2) return alert('Комната заполнена!');
+    game.roomId = rid; game.playerId = 'player2';
+    await update(ref(db, `rooms/${rid}`), { 'player2': { char: game.selectedChar, ready: true }, status: 'ready' });
+    document.getElementById('roomId').textContent = rid;
+    document.getElementById('roomInfo').style.display = 'flex';
+    document.getElementById('createRoomBtn').disabled = true;
+    document.getElementById('joinRoomBtn').disabled = true;
+    listenForGameStart();
+  }
 
-    // ========== НОВАЯ СИСТЕМА УДАРА ==========
-    function handleKick() {
-        const player = gameState.players[gameState.playerId];
-        if(!player || !player.dribbling) return;
-        const now = Date.now();
-        if(now < player.stunnedUntil || now < gameState.globalFreezeUntil) return;
-        
-        let power = 39;
-        if(player.charType === 'Kaiser') power = 58;
-        if(player.auraActive && player.charType === 'Isagi') power = 50;
-        if(player.auraActive && player.charType === 'Naruto') power = 62;
-        if(player.skillActive && player.charType === 'Rin') power = 55;
-        
-        let kickDx = Math.cos(player.angle) * power;
-        let kickDy = Math.sin(player.angle) * power;
-        let curve = 0;
-        if(player.skillActive && player.charType === 'Rin') curve = -1.5;
-        
-        player.dribbling = false;
-        if(gameState.playerId === 'player1') {
-            gameState.ball.dx = kickDx; gameState.ball.dy = kickDy; gameState.ball.curve = curve; gameState.ball.dribbler = null;
-        } else { player.kickIntent = { dx: kickDx, dy: kickDy, curve: curve }; }
-        updateGameState();
-    }
+  function listenForOpponent() {
+    onValue(ref(db, `rooms/${game.roomId}`), (snap) => {
+      const d = snap.val();
+      if (d && d.player2) { document.getElementById('startGameBtn').disabled = false; document.getElementById('playersList').textContent = 'Игрок 2 подключился!'; }
+      else document.getElementById('playersList').textContent = 'Ожидание подключения...';
+    });
+  }
 
-    // ========== ПЕРЕРАБОТАННЫЕ СПОСОБНОСТИ ==========
-    function handleAbility() {
-        const player = gameState.players[gameState.playerId];
-        if(!player) return;
-        const now = Date.now();
-        if(now < player.cdUntil || now < player.stunnedUntil || now < gameState.globalFreezeUntil) return;
-        const char = player.charType;
-        player.skillActive = now + 3000;
-        player.cdUntil = now + CHARACTERS[char].cd * 1000;
-        player.auraActive = true;
-        player.auraEndTime = now + 3000;
-        
-        // ХАЛК
-        if(char === 'Hulk') {
-            player.radius = CHARACTERS.Hulk.baseRadius * 2;
-            player.extraData.hulkGrowEnd = now + 4000;
-            // отталкивание врага
-            const opp = gameState.players[gameState.playerId === 'player1' ? 'player2' : 'player1'];
-            if(opp && distance(player, opp) < player.radius + opp.radius + 30) {
-                const angle = Math.atan2(opp.y - player.y, opp.x - player.x);
-                opp.x += Math.cos(angle) * 70; opp.y += Math.sin(angle) * 70;
-                opp.stunnedUntil = now + 800;
-            }
-            player.skillType = "Hulk";
-        }
-        // ИСАГИ: щит ворот + скорость
-        else if(char === 'Isagi') {
-            player.speed = 11 * 1.6;
-            player.extraData.isagiShieldEnd = now + 2500;
-            player.skillType = "Isagi";
-        }
-        // РИН: увеличение чужих ворот + стан врага рядом
-        else if(char === 'Rin') {
-            gameState.rinActive = true;
-            setTimeout(() => { gameState.rinActive = false; }, 4000);
-            const opp = gameState.players[gameState.playerId === 'player1' ? 'player2' : 'player1'];
-            if(opp && distance(player, opp) < 200) opp.stunnedUntil = now + 1500;
-            player.skillType = "Rin";
-        }
-        // ПУДЖ: ROT с мячом или HOOK без мяча
-        else if(char === 'Pudge') {
-            if(player.dribbling) {
-                player.extraData.rotActive = now + 3000;
-                player.skillType = "Rot";
-            } else {
-                // HOOK
-                const hookTarget = { x: player.x + Math.cos(player.angle)*700, y: player.y + Math.sin(player.angle)*700 };
-                const ballDist = distance({x:gameState.ball.x,y:gameState.ball.y}, player);
-                const opp = gameState.players[gameState.playerId === 'player1' ? 'player2' : 'player1'];
-                const oppDist = opp ? distance(opp, player) : 9999;
-                if(ballDist < 700 && ballDist < oppDist) {
-                    gameState.ball.x = player.x + Math.cos(player.angle)*40; gameState.ball.y = player.y + Math.sin(player.angle)*40;
-                    gameState.ball.dx = 0; gameState.ball.dy = 0; gameState.ball.dribbler = gameState.playerId;
-                } else if(opp && oppDist < 700) {
-                    opp.x = player.x + Math.cos(player.angle)*50; opp.y = player.y + Math.sin(player.angle)*50;
-                    opp.stunnedUntil = now + 1200;
-                }
-                player.skillType = "Hook";
-            }
-        }
-        // АЙКУ: телепорт к мячу на своей половине
-        else if(char === 'Aiku') {
-            const myHalf = (gameState.playerId === 'player1') ? (gameState.ball.x < gameState.canvas.width/2) : (gameState.ball.x > gameState.canvas.width/2);
-            if(myHalf) {
-                player.x = gameState.ball.x; player.y = gameState.ball.y;
-                gameState.globalFreezeUntil = now + 2000;
-                gameState.ball.dx = 0; gameState.ball.dy = 0;
-            }
-            player.skillType = "Aiku";
-        }
-        // КАЙЗЕР: двойной рывок
-        else if(char === 'Kaiser') {
-            player.stunnedUntil = now + 300;
-            setTimeout(() => {
-                if(player) { player.x += Math.cos(player.angle)*280; player.y += Math.sin(player.angle)*280; }
-            }, 50);
-            setTimeout(() => {
-                if(player) { player.x += Math.cos(player.angle)*280; player.y += Math.sin(player.angle)*280; }
-            }, 400);
-            player.skillType = "Kaiser";
-        }
-        // НАГИ: шкала заряда от голов
-        else if(char === 'Nagi') {
-            if(gameState.nagiCharge >= 0.99) {
-                gameState.globalFreezeUntil = now + 5000;
-                setTimeout(() => {
-                    for(let i=0;i<5;i++) {
-                        let angleOff = (i===0?player.angle : i===1?player.angle+1.57 : i===2?player.angle-1.57 : i===3?player.angle+3.14 : player.angle+0.7);
-                        let kickDx = Math.cos(angleOff)*85; let kickDy = Math.sin(angleOff)*85;
-                        if(gameState.playerId === 'player1') { gameState.ball.dx = kickDx; gameState.ball.dy = kickDy; gameState.ball.dribbler = null; }
-                        else player.kickIntent = { dx: kickDx, dy: kickDy, curve:0 };
-                    }
-                }, 200);
-                gameState.nagiCharge = 0;
-            } else if(gameState.nagiCharge >= 0.5) {
-                gameState.globalFreezeUntil = now + 1500;
-                const opp = gameState.players[gameState.playerId === 'player1' ? 'player2' : 'player1'];
-                if(opp && distance(player, opp) < 150) opp.stunnedUntil = now + 800;
-                gameState.nagiCharge -= 0.5;
-            }
-            player.skillType = "Nagi";
-        }
-        // ДИО
-        else if(char === 'Dio') {
-            if(!player.dribbling) {
-                gameState.globalFreezeUntil = now + 5000;
-                player.skillType = "TheWorld";
-            } else {
-                gameState.globalFreezeUntil = now + 3500;
-                player.x -= Math.cos(player.angle)*60;
-                setTimeout(() => {
-                    for(let i=0;i<7;i++) { // ножи визуально
-                        let angleOff = player.angle - 1.2 + i*0.4;
-                        let knifeDx = Math.cos(angleOff)*55; let knifeDy = Math.sin(angleOff)*55;
-                        if(gameState.playerId === 'player1') { gameState.ball.dx = knifeDx; gameState.ball.dy = knifeDy; gameState.ball.dribbler = null; }
-                        else player.kickIntent = { dx: knifeDx, dy: knifeDy, curve:0 };
-                    }
-                }, 100);
-                player.skillType = "Checkmate";
-            }
-        }
-        // НАРУТО
-        else if(char === 'Naruto') {
-            player.speed = 11 * 1.5;
-            player.skillType = "NarutoAura";
-            player.extraData.narutoModeEnd = now + 4000;
-        }
-        // МАХАРАГА: смена режима
-        else if(char === 'Maharaga') {
-            gameState.maharagaMode = (gameState.maharagaMode + 1) % 3;
-            if(gameState.maharagaMode === 0) { player.speed = 11*1.2; player.radius = 35; }
-            else if(gameState.maharagaMode === 1) { player.speed = 11*0.8; player.radius = 65; }
-            else { player.speed = 11; player.radius = 38; gameState.maharagaDash = true; setTimeout(()=>{if(player) player.x+=Math.cos(player.angle)*60; gameState.maharagaDash=false;},200); }
-            player.skillType = "MaharagaMode";
-        }
-        updateGameState();
-    }
+  function listenForGameStart() {
+    onValue(ref(db, `rooms/${game.roomId}`), (snap) => {
+      const d = snap.val();
+      if (d && d.status === 'playing' && !game.started) {
+        document.getElementById('menu').style.display = 'none';
+        document.getElementById('score').style.display = 'block';
+        initGame(d);
+      }
+    });
+  }
 
-    // Обновление позиций + физика мяча (ХОСТ управляет)
-    function updatePlayerPosition(player) {
-        if(!player) return;
-        const now = Date.now();
-        if(now < player.stunnedUntil || now < gameState.globalFreezeUntil) return;
-        if(player.auraActive && player.auraEndTime < now) {
-            player.auraActive = false;
-            if(player.charType === 'Hulk' && player.radius > CHARACTERS.Hulk.baseRadius) player.radius = CHARACTERS.Hulk.baseRadius;
-            if(player.charType === 'Isagi') player.speed = 11;
-            if(player.charType === 'Naruto') player.speed = 11;
-        }
-        let curSpeed = player.speed * (player.dribbling ? 0.75 : 1);
-        if(player.auraActive && (player.charType === 'Isagi' || player.charType === 'Naruto')) curSpeed *= 1.6;
-        if(gameState.keys['a'] || gameState.keys['ArrowLeft']) player.angle -= 0.1;
-        if(gameState.keys['d'] || gameState.keys['ArrowRight']) player.angle += 0.1;
-        if(gameState.keys['w'] || gameState.keys['ArrowUp']) { player.x += Math.cos(player.angle)*curSpeed; player.y += Math.sin(player.angle)*curSpeed; }
-        if(gameState.keys['s'] || gameState.keys['ArrowDown']) { player.x -= Math.cos(player.angle)*curSpeed*0.6; player.y -= Math.sin(player.angle)*curSpeed*0.6; }
-        player.x = Math.max(player.radius, Math.min(gameState.canvas.width - player.radius, player.x));
-        player.y = Math.max(player.radius, Math.min(gameState.canvas.height - player.radius, player.y));
-    }
+  async function startGame() {
+    const snap = await get(ref(db, `rooms/${game.roomId}`));
+    const rd = snap.val();
+    const SW = window.innerWidth, SH = window.innerHeight;
+    await update(ref(db, `rooms/${game.roomId}`), {
+      status: 'playing',
+      ball: { x: SW/2, y: SH/2, dx: 0, dy: 0, radius: 24, dribbler: null, curve: 0 },
+      score: [0,0],
+      gks: { blue: { y: SH/2 }, red: { y: SH/2 } },
+      players: {
+        player1: { x: SW*0.2, y: SH/2, angle:0, color:'#0d47a1', charType: rd.player1.char, radius: CHARACTERS[rd.player1.char].baseRadius, speed:11, dribbling:false, auraActive:false, cdUntil:0, stunnedUntil:0, skillTime:0, skillType:"", nagiCharge:0 },
+        player2: { x: SW*0.8, y: SH/2, angle:Math.PI, color:'#b71c1c', charType: rd.player2.char, radius: CHARACTERS[rd.player2.char].baseRadius, speed:11, dribbling:false, auraActive:false, cdUntil:0, stunnedUntil:0, skillTime:0, skillType:"", nagiCharge:0 }
+      }
+    });
+  }
 
-    function checkBallPickup(player, id) {
-        if(!player || gameState.ball.dribbler) return;
-        const now = Date.now();
-        if(now < player.stunnedUntil || now < gameState.globalFreezeUntil) return;
-        if(distance(player, gameState.ball) < player.radius + gameState.ball.radius + 10) {
-            const oppId = id === 'player1' ? 'player2' : 'player1';
-            const opp = gameState.players[oppId];
-            if(opp && opp.auraActive && opp.charType === 'Naruto') {
-                player.stunnedUntil = now + 1000;
-                player.x -= Math.cos(player.angle)*120; player.y -= Math.sin(player.angle)*120;
-                return;
-            }
-            player.dribbling = true;
-            if(gameState.playerId === 'player1') gameState.ball.dribbler = id;
-        }
-    }
+  function initGame(data) {
+    game.started = true;
+    game.canvas = document.getElementById('gameCanvas');
+    game.ctx = game.canvas.getContext('2d');
+    game.canvas.width = window.innerWidth;
+    game.canvas.height = window.innerHeight;
+    game.ball = data.ball;
+    game.score = data.score || [0,0];
+    game.players.player1 = data.players.player1;
+    game.players.player2 = data.players.player2;
+    if (data.gks) { game.gks.blue.y = data.gks.blue.y; game.gks.red.y = data.gks.red.y; }
+    setupControls();
+    listenForGameUpdates();
+    gameLoop();
+  }
 
-    function updateBallAndAI() {
-        if(gameState.playerId !== 'player1') return;
-        const ball = gameState.ball;
-        if(!ball) return;
-        if(ball.dribbler) {
-            const holder = gameState.players[ball.dribbler];
-            if(holder) {
-                ball.x = holder.x + Math.cos(holder.angle)*(holder.radius+ball.radius+2);
-                ball.y = holder.y + Math.sin(holder.angle)*(holder.radius+ball.radius+2);
-                ball.dx=0; ball.dy=0;
-            } else ball.dribbler=null;
-        } else {
-            const p2 = gameState.players.player2;
-            if(p2?.kickIntent) {
-                ball.dx = p2.kickIntent.dx; ball.dy = p2.kickIntent.dy; ball.curve = p2.kickIntent.curve||0;
-                ball.dribbler = null; delete p2.kickIntent;
-            }
-            if(ball.curve && Math.hypot(ball.dx,ball.dy)>1) {
-                let angle = Math.atan2(ball.dy, ball.dx) + ball.curve*0.03;
-                let speed = Math.hypot(ball.dx,ball.dy);
-                ball.dx = Math.cos(angle)*speed; ball.dy = Math.sin(angle)*speed;
-                ball.curve *= 0.98;
-            }
-            ball.x += ball.dx; ball.y += ball.dy;
-            ball.dx *= 0.98; ball.dy *= 0.98;
-            
-            let goalH = gameState.goalHeight;
-            if(gameState.rinActive && gameState.playerId === 'player1') goalH = 570;
-            const goalY1 = gameState.canvas.height/2 - goalH/2;
-            const goalY2 = gameState.canvas.height/2 + goalH/2;
-            
-            // вратари
-            const centerY = gameState.canvas.height/2;
-            gameState.gks.blue.y += ((ball.x > gameState.canvas.width/2 ? centerY : ball.y) - gameState.gks.blue.y)*0.12;
-            gameState.gks.red.y += ((ball.x < gameState.canvas.width/2 ? centerY : ball.y) - gameState.gks.red.y)*0.12;
-            gameState.gks.blue.y = Math.max(centerY-220, Math.min(centerY+220, gameState.gks.blue.y));
-            gameState.gks.red.y = Math.max(centerY-220, Math.min(centerY+220, gameState.gks.red.y));
-            
-            if(Math.hypot(35 - ball.x, gameState.gks.blue.y - ball.y) < 30+ball.radius) { ball.dx = Math.abs(ball.dx)*1.2+8; ball.curve=0; }
-            if(Math.hypot(gameState.canvas.width-35 - ball.x, gameState.gks.red.y - ball.y) < 30+ball.radius) { ball.dx = -Math.abs(ball.dx)*1.2-8; ball.curve=0; }
-            
-            // голы
-            if(ball.y >= goalY1 && ball.y <= goalY2) {
-                if(ball.x < 20) { gameState.score[1]++; if(gameState.players.player2?.charType === 'Nagi') gameState.nagiCharge += 0.5; resetMatch(); }
-                else if(ball.x > gameState.canvas.width-20) { gameState.score[0]++; if(gameState.players.player1?.charType === 'Nagi') gameState.nagiCharge += 0.5; resetMatch(); }
-            }
-            // стены
-            if(ball.y < ball.radius) { ball.dy*=-1; ball.y=ball.radius; }
-            if(ball.y > gameState.canvas.height-ball.radius) { ball.dy*=-1; ball.y=gameState.canvas.height-ball.radius; }
-            if((ball.y < goalY1 || ball.y > goalY2) && (ball.x < ball.radius || ball.x > gameState.canvas.width-ball.radius)) { ball.dx*=-1; }
-        }
-    }
-    
-    function resetMatch() {
-        const SW = gameState.canvas.width, SH = gameState.canvas.height;
-        gameState.ball = { x: SW/2, y: SH/2, dx:0, dy:0, radius:24, dribbler:null, curve:0 };
-        gameState.players.player1.x = SW*0.2; gameState.players.player1.y = SH/2; gameState.players.player1.dribbling=false; gameState.players.player1.auraActive=false;
-        gameState.players.player2.x = SW*0.8; gameState.players.player2.y = SH/2; gameState.players.player2.dribbling=false; gameState.players.player2.auraActive=false;
-        update(ref(db, `rooms/${gameState.roomId}`), { ball: gameState.ball, score: gameState.score, players: gameState.players });
-    }
+  function setupControls() {
+    document.addEventListener('keydown', (e) => {
+      game.keys[e.key] = true;
+      if (e.key === ' ') handleKick();
+      if (e.key === 'w' || e.key === 'W' || e.key === 'ц' || e.key === 'Ц' || e.key === 'ArrowUp') handleAbility();
+    });
+    document.addEventListener('keyup', (e) => { game.keys[e.key] = false; });
+  }
 
-    function updateGameState() {
-        if(!gameState.roomId) return;
-        if(gameState.playerId === 'player1') {
-            update(ref(db, `rooms/${gameState.roomId}`), { players/player1: gameState.players.player1, ball: gameState.ball, score: gameState.score, 'gks/blue/y': gameState.gks.blue.y, 'gks/red/y': gameState.gks.red.y });
-        } else {
-            update(ref(db, `rooms/${gameState.roomId}`), { 'players/player2': gameState.players.player2 });
-        }
-    }
+  function handleAbility() {
+    const p = game.players[game.playerId];
+    if (!p || Date.now() < p.cdUntil || Date.now() < p.stunnedUntil || Date.now() < game.freezeUntil) return;
+    const now = Date.now();
+    p.cdUntil = now + CHARACTERS[p.charType].cd * 1000;
+    p.auraActive = true;
+    p.auraEndTime = now + 4000;
+    p.skillTime = now;
+    p.skillType = p.charType;
 
-    function listenForGameUpdates() {
-        const roomRef = ref(db, `rooms/${gameState.roomId}`);
-        const oppId = gameState.playerId === 'player1' ? 'player2' : 'player1';
-        onValue(roomRef, (snap) => {
-            const data = snap.val();
-            if(!data) return;
-            if(data.score) { gameState.score = data.score; document.getElementById('score').innerText = `${gameState.score[0]} : ${gameState.score[1]}`; }
-            if(data.players && data.players[oppId]) gameState.players[oppId] = data.players[oppId];
-            if(gameState.playerId === 'player2') { if(data.ball) gameState.ball = data.ball; if(data.gks) { gameState.gks.blue.y = data.gks.blue.y; gameState.gks.red.y = data.gks.red.y; } }
-            if(data.players?.player1?.charType === 'Nagi' && data.players.player1.extraData?.nagiCharge !== undefined) gameState.nagiCharge = data.players.player1.extraData.nagiCharge;
-        });
+    if (p.charType === 'Hulk') { p.radius = CHARACTERS.Hulk.baseRadius * 2; }
+    else if (p.charType === 'Aiku') {
+      const ownHalf = game.playerId==='player1' ? game.ball.x < game.canvas.width/2 : game.ball.x > game.canvas.width/2;
+      if (ownHalf) { p.x = game.ball.x; p.y = game.ball.y; game.freezeUntil = now + 2000; game.ball.dx = 0; game.ball.dy = 0; }
+    } else if (p.charType === 'Dio') {
+      if (p.dribbling) { game.freezeUntil = now + 3500; p.x -= Math.cos(p.angle)*60; p.y -= Math.sin(p.angle)*60; }
+      else { game.freezeUntil = now + 5000; }
+    } else if (p.charType === 'Nagi') {
+      if (p.nagiCharge >= 1.0) { p.nagiCharge = 0; game.freezeUntil = now + 5000; }
+      else if (p.nagiCharge >= 0.5) { p.nagiCharge -= 0.5; game.freezeUntil = now + 1500; }
     }
+    updateGameState();
+  }
 
-    function draw() {
-        const ctx = gameState.ctx, canvas = gameState.canvas;
-        if(!ctx) return;
-        ctx.fillStyle = '#007539'; ctx.fillRect(0,0,canvas.width,canvas.height);
-        ctx.strokeStyle='white'; ctx.lineWidth=2;
-        ctx.beginPath(); ctx.moveTo(canvas.width/2,0); ctx.lineTo(canvas.width/2,canvas.height); ctx.stroke();
-        ctx.beginPath(); ctx.arc(canvas.width/2,canvas.height/2,100,0,Math.PI*2); ctx.stroke();
-        let goalH = gameState.goalHeight;
-        if(gameState.rinActive && gameState.playerId === 'player1') goalH = 570;
-        const goalY1 = canvas.height/2 - goalH/2;
-        ctx.fillStyle='#1e88e5'; ctx.fillRect(0,goalY1,20,goalH);
-        ctx.fillStyle='#e53935'; ctx.fillRect(canvas.width-20,goalY1,20,goalH);
-        ctx.fillStyle=gameState.gks.blue.color; ctx.beginPath(); ctx.arc(35, gameState.gks.blue.y,30,0,Math.PI*2); ctx.fill();
-        ctx.fillStyle=gameState.gks.red.color; ctx.beginPath(); ctx.arc(canvas.width-35, gameState.gks.red.y,30,0,Math.PI*2); ctx.fill();
-        const now = Date.now();
-        for(const [id,p] of Object.entries(gameState.players)) {
-            if(!p) continue;
-            if(p.auraActive) { ctx.shadowBlur=15; ctx.shadowColor='#0ff'; ctx.beginPath(); ctx.arc(p.x,p.y,p.radius+8,0,Math.PI*2); ctx.stroke(); ctx.shadowBlur=0; }
-            if(now < p.stunnedUntil) { ctx.strokeStyle='#ffeb3b'; ctx.lineWidth=3; ctx.beginPath(); ctx.arc(p.x,p.y,p.radius+12,0,Math.PI*2); ctx.stroke(); }
-            ctx.fillStyle = CHARACTERS[p.charType]?.color || '#aaa'; ctx.beginPath(); ctx.arc(p.x,p.y,p.radius,0,Math.PI*2); ctx.fill(); ctx.strokeStyle='white'; ctx.stroke();
-            ctx.beginPath(); ctx.moveTo(p.x,p.y); ctx.lineTo(p.x+Math.cos(p.angle)*p.radius, p.y+Math.sin(p.angle)*p.radius); ctx.stroke();
-            ctx.fillStyle='white'; ctx.font='bold 12px Arial'; ctx.fillText(CHARACTERS[p.charType]?.name||'?', p.x, p.y-p.radius-8);
-            if(id === gameState.playerId && p.dribbling && p.auraActive && p.charType==='Isagi') {
-                ctx.strokeStyle='cyan'; ctx.setLineDash([8,8]); ctx.beginPath(); ctx.moveTo(p.x,p.y); ctx.lineTo(p.x+Math.cos(p.angle)*500, p.y+Math.sin(p.angle)*500); ctx.stroke(); ctx.setLineDash([]);
-            }
-        }
-        ctx.fillStyle='white'; ctx.beginPath(); ctx.arc(gameState.ball.x, gameState.ball.y, gameState.ball.radius,0,Math.PI*2); ctx.fill(); ctx.stroke();
-        if(gameState.pudgeFlies.length) { ctx.fillStyle='#8B4513'; gameState.pudgeFlies.forEach(f=>{ ctx.beginPath(); ctx.arc(f.x,f.y,f.size,0,Math.PI*2); ctx.fill(); }); }
-    }
+  function handleKick() {
+    const p = game.players[game.playerId];
+    if (!p || !p.dribbling || Date.now() < game.freezeUntil) return;
+    let power = 42;
+    if (p.charType === 'Kaiser') power = 58;
+    if (p.charType === 'Naruto' && p.auraActive) power = 62;
+    if (p.charType === 'Dio' && p.auraActive) power = 75;
+    if (p.charType === 'Nagi' && p.auraActive) power = 85;
+    const kick = { dx: Math.cos(p.angle)*power, dy: Math.sin(p.angle)*power, curve: (p.charType==='Rin' && p.auraActive) ? -1.5 : 0 };
+    p.dribbling = false;
+    if (game.playerId === 'player1') { game.ball.dx = kick.dx; game.ball.dy = kick.dy; game.ball.curve = kick.curve; game.ball.dribbler = null; }
+    else { p.kickIntent = kick; }
+    updateGameState();
+  }
 
-    function gameLoop() {
-        if(!gameState.gameStarted) return;
-        const my = gameState.players[gameState.playerId];
-        const opp = gameState.players[gameState.playerId === 'player1' ? 'player2' : 'player1'];
-        if(my) updatePlayerPosition(my);
-        if(opp) checkBallPickup(opp, gameState.playerId === 'player1' ? 'player2' : 'player1');
-        if(my) checkBallPickup(my, gameState.playerId);
-        if(gameState.playerId === 'player1' && opp && opp.dribbling) gameState.ball.dribbler = 'player2';
-        if(my && !my.dribbling && gameState.ball.dribbler === gameState.playerId) gameState.ball.dribbler = null;
-        updateBallAndAI();
-        draw();
-        if(Date.now() - gameState.lastUpdateTime > 45) { updateGameState(); gameState.lastUpdateTime = Date.now(); }
-        requestAnimationFrame(gameLoop);
+  function updatePlayerPosition(player) {
+    if (!player || Date.now() < player.stunnedUntil || Date.now() < game.freezeUntil) return;
+    if (player.auraActive && Date.now() > player.auraEndTime) { player.auraActive = false; if (player.charType==='Hulk') player.radius = CHARACTERS.Hulk.baseRadius; }
+    let sp = player.speed * (player.dribbling ? 0.75 : 1);
+    if (player.auraActive && (player.charType==='Isagi'||player.charType==='Naruto'||player.charType==='Kaiser')) sp *= 1.6;
+    if (game.keys['a'] || game.keys['ArrowLeft'] || game.keys['ф']) player.angle -= 0.1;
+    if (game.keys['d'] || game.keys['ArrowRight'] || game.keys['в']) player.angle += 0.1;
+    if (game.keys['w'] || game.keys['ArrowUp'] || game.keys['ц']) { player.x += Math.cos(player.angle)*sp; player.y += Math.sin(player.angle)*sp; }
+    if (game.keys['s'] || game.keys['ArrowDown'] || game.keys['ы']) { player.x -= Math.cos(player.angle)*sp*0.6; player.y -= Math.sin(player.angle)*sp*0.6; }
+    player.x = Math.max(player.radius, Math.min(game.canvas.width-player.radius, player.x));
+    player.y = Math.max(player.radius, Math.min(game.canvas.height-player.radius, player.y));
+  }
+
+  function checkBallPickup(player, id) {
+    if (!player || game.ball.dribbler || Date.now() < player.stunnedUntil) return;
+    if (Math.hypot(player.x-game.ball.x, player.y-game.ball.y) < player.radius+game.ball.radius+12) {
+      const opp = game.players[id==='player1'?'player2':'player1'];
+      if (opp && opp.charType==='Naruto' && opp.auraActive) { player.stunnedUntil = Date.now()+1000; player.x -= Math.cos(player.angle)*120; player.y -= Math.sin(player.angle)*120; return; }
+      player.dribbling = true; if (game.playerId==='player1') { game.ball.dribbler = id; game.ball.curve = 0; }
     }
-    initMenu();
+  }
+
+  function updateBallAndAI() {
+    const ball = game.ball, now = Date.now();
+    if (now < game.freezeUntil) return;
+    if (ball.dribbler) {
+      const h = game.players[ball.dribbler];
+      if (h) { ball.x = h.x + Math.cos(h.angle)*(h.radius+ball.radius+2); ball.y = h.y + Math.sin(h.angle)*(h.radius+ball.radius+2); ball.dx=0; ball.dy=0; }
+    } else if (game.playerId === 'player1') {
+      const p2 = game.players.player2;
+      if (p2 && p2.kickIntent) { ball.dx = p2.kickIntent.dx; ball.dy = p2.kickIntent.dy; ball.curve = p2.kickIntent.curve; ball.dribbler = null; delete p2.kickIntent; }
+      if (ball.curve && Math.hypot(ball.dx, ball.dy)>1) { let a=Math.atan2(ball.dy,ball.dx)+ball.curve*0.03; let s=Math.hypot(ball.dx,ball.dy); ball.dx=Math.cos(a)*s; ball.dy=Math.sin(a)*s; ball.curve*=0.98; }
+      ball.x += ball.dx; ball.y += ball.dy; ball.dx *= 0.98; ball.dy *= 0.98;
+      const cy = game.canvas.height/2, gkL=220;
+      game.gks.blue.y += ((ball.x<game.canvas.width/2 ? ball.y : cy) - game.gks.blue.y)*0.12;
+      game.gks.red.y += ((ball.x>game.canvas.width/2 ? ball.y : cy) - game.gks.red.y)*0.12;
+      game.gks.blue.y = Math.max(cy-gkL, Math.min(cy+gkL, game.gks.blue.y));
+      game.gks.red.y = Math.max(cy-gkL, Math.min(cy+gkL, game.gks.red.y));
+      if (Math.hypot(35-ball.x, game.gks.blue.y-ball.y) < game.gks.blue.radius+ball.radius) { ball.dx = Math.abs(ball.dx)*1.2+8; ball.curve=0; }
+      if (Math.hypot(game.canvas.width-35-ball.x, game.gks.red.y-ball.y) < game.gks.red.radius+ball.radius) { ball.dx = -Math.abs(ball.dx)*1.2-8; ball.curve=0; }
+      checkGoal();
+    }
+    if (ball.y < ball.radius) { ball.dy*=-1; ball.y=ball.radius; }
+    if (ball.y > game.canvas.height-ball.radius) { ball.dy*=-1; ball.y=game.canvas.height-ball.radius; }
+  }
+
+  function checkGoal() {
+    const gh=450, gy1=game.canvas.height/2-gh/2, gy2=game.canvas.height/2+gh/2;
+    if (game.ball.y>=gy1 && game.ball.y<=gy2) {
+      if (game.ball.x<15) { game.score[1]++; resetMatch(); }
+      else if (game.ball.x>game.canvas.width-15) { game.score[0]++; resetMatch(); }
+    }
+  }
+
+  function resetMatch() {
+    const SW=game.canvas.width, SH=game.canvas.height;
+    game.ball.x=SW/2; game.ball.y=SH/2; game.ball.dx=0; game.ball.dy=0; game.ball.dribbler=null; game.ball.curve=0;
+    game.players.player1.x=SW*0.2; game.players.player1.y=SH/2; game.players.player1.angle=0; game.players.player1.dribbling=false; game.players.player1.auraActive=false;
+    game.players.player2.x=SW*0.8; game.players.player2.y=SH/2; game.players.player2.angle=Math.PI; game.players.player2.dribbling=false; game.players.player2.auraActive=false;
+    update(ref(db, `rooms/${game.roomId}`), { ball: game.ball, score: game.score, players: game.players });
+  }
+
+  function updateGameState() {
+    if (!game.roomId) return;
+    const p = game.players[game.playerId];
+    if (game.playerId === 'player1') {
+      update(ref(db, `rooms/${game.roomId}`), { 'players/player1': p, ball: game.ball, score: game.score, 'gks/blue/y': game.gks.blue.y, 'gks/red/y': game.gks.red.y });
+    } else {
+      update(ref(db, `rooms/${game.roomId}`), { 'players/player2': p });
+    }
+  }
+
+  function listenForGameUpdates() {
+    const oppId = game.playerId==='player1'?'player2':'player1';
+    onValue(ref(db, `rooms/${game.roomId}`), (snap) => {
+      const d = snap.val(); if (!d) return;
+      if (d.score && (game.score[0]!==d.score[0]||game.score[1]!==d.score[1])) { game.score=d.score; document.getElementById('score').textContent=`${game.score[0]} : ${game.score[1]}`; }
+      if (d.players && d.players[oppId]) game.players[oppId] = d.players[oppId];
+      if (game.playerId==='player2' && d.ball) game.ball = d.ball;
+      if (d.gks) { game.gks.blue.y = d.gks.blue.y; game.gks.red.y = d.gks.red.y; }
+    });
+  }
+
+  function draw() {
+    const ctx = game.ctx, cw=game.canvas.width, ch=game.canvas.height;
+    if (!ctx) return;
+    ctx.fillStyle='#007539'; ctx.fillRect(0,0,cw,ch);
+    ctx.strokeStyle='#fff'; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(cw/2,0); ctx.lineTo(cw/2,ch); ctx.stroke();
+    ctx.beginPath(); ctx.arc(cw/2,ch/2,100,0,Math.PI*2); ctx.stroke();
+    const gh=450, gy1=ch/2-gh/2;
+    ctx.fillStyle='#1e88e5'; ctx.fillRect(0,gy1,20,gh);
+    ctx.fillStyle='#e53935'; ctx.fillRect(cw-20,gy1,20,gh);
+    ctx.fillStyle=game.gks.blue.color; ctx.beginPath(); ctx.arc(35, game.gks.blue.y, 30, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+    ctx.fillStyle=game.gks.red.color; ctx.beginPath(); ctx.arc(cw-35, game.gks.red.y, 30, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+    for (const [id, p] of Object.entries(game.players)) {
+      if (!p) continue;
+      if (p.auraActive) { ctx.save(); ctx.strokeStyle='#00ffff'; ctx.lineWidth=4; ctx.shadowBlur=15; ctx.shadowColor='#00ffff'; ctx.beginPath(); ctx.arc(p.x,p.y,p.radius+8,0,Math.PI*2); ctx.stroke(); ctx.restore(); }
+      ctx.fillStyle=p.color; ctx.beginPath(); ctx.arc(p.x,p.y,p.radius,0,Math.PI*2); ctx.fill(); ctx.strokeStyle='#fff'; ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(p.x,p.y); ctx.lineTo(p.x+Math.cos(p.angle)*p.radius, p.y+Math.sin(p.angle)*p.radius); ctx.stroke();
+      ctx.fillStyle='#fff'; ctx.font='bold 14px Arial'; ctx.textAlign='center'; ctx.fillText(CHARACTERS[p.charType].name, p.x, p.y-p.radius-12);
+    }
+    if (game.ball) { ctx.fillStyle='#fff'; ctx.beginPath(); ctx.arc(game.ball.x, game.ball.y, game.ball.radius, 0, Math.PI*2); ctx.fill(); ctx.strokeStyle='#000'; ctx.stroke(); }
+  }
+
+  function gameLoop() {
+    if (!game.started) return;
+    const my = game.players[game.playerId], opp = game.players[game.playerId==='player1'?'player2':'player1'];
+    updatePlayerPosition(my); checkBallPickup(my, game.playerId); checkBallPickup(opp, game.playerId==='player1'?'player2':'player1');
+    if (game.playerId==='player1' && opp && opp.dribbling) game.ball.dribbler = 'player2';
+    if (my && !my.dribbling && game.ball.dribbler===game.playerId) game.ball.dribbler = null;
+    updateBallAndAI(); draw();
+    if (Date.now() - game.lastUpdate > 45) { updateGameState(); game.lastUpdate = Date.now(); }
+    requestAnimationFrame(gameLoop);
+  }
+
+  initMenu();
 </script>
 </body>
 </html>
