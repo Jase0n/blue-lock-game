@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blue Lock Impact 2026 - Multiplayer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0a0a0a;
+            overflow: hidden;
+            font-family: 'Arial', sans-serif;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        #gameContainer {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        canvas {
+            display: block;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+
+        #menu {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        #menu h1 {
+            color: #00ffff;
+            font-size: 60px;
+            margin-bottom: 30px;
+            text-shadow: 0 0 20px rgba(0, 255, 255, 0.5);
+        }
+
+        #menu .subtitle {
+            color: #aaa;
+            font-size: 24px;
+            margin-bottom: 50px;
+        }
+
+        .char-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 15px;
+            padding: 20px;
+            max-width: 1400px;
+        }
+
+        .char-card {
+            background: #111;
+            border: 3px solid #333;
+            padding: 15px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-align: center;
+            min-width: 200px;
+        }
+
+        .char-card:hover {
+            border-color: #00ffff;
+            transform: scale(1.05);
+            box-shadow: 0 0 30px rgba(0, 255, 255, 0.3);
+        }
+
+        .char-card.selected {
+            border-color: #ff3300;
+            box-shadow: 0 0 30px rgba(255, 51, 0, 0.5);
+        }
+
+        .char-card h3 {
+            color: white;
+            font-size: 20px;
+            margin-bottom: 10px;
+        }
+
+        .char-card p {
+            color: #888;
+            font-size: 12px;
+            line-height: 1.4;
+        }
+
+        .btn {
+            background: #00ffff;
+            color: #000;
+            padding: 15px 40px;
+            border: none;
+            border-radius: 5px;
+            font-size: 20px;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 10px;
+            transition: all 0.3s;
+        }
+
+        .btn:hover {
+            background: #00cccc;
+            transform: scale(1.1);
+        }
+
+        .btn:disabled {
+            background: #333;
+            color: #666;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        #roomInfo {
+            color: white;
+            font-size: 18px;
+            margin: 20px 0;
+        }
+
+        #playersList {
+            color: #aaa;
+            margin: 20px 0;
+        }
+
+        #controls {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 100;
+            display: none;
+        }
+
+        .control-btn {
+            width: 80px;
+            height: 80px;
+            background: rgba(255, 255, 255, 0.2);
+            border: 2px solid rgba(255, 255, 255, 0.5);
+            border-radius: 50%;
+            color: white;
+            font-size: 24px;
+            margin: 0 10px;
+            cursor: pointer;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        .control-btn:active {
+            background: rgba(255, 255, 255, 0.4);
+        }
+
+        #score {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: white;
+            font-size: 60px;
+            font-weight: bold;
+            z-index: 10;
+            text-shadow: 0 0 20px rgba(0, 0, 0, 0.8);
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <canvas id="gameCanvas"></canvas>
+        <div id="menu">
+            <h1>BLUE LOCK IMPACT 2026</h1>
+            <p class="subtitle">Выберите персонажа</p>
+            
+            <div id="roomInfo" style="display:none;">
+                Комната: <span id="roomId"></span>
+            </div>
+            
+            <div class="char-grid" id="charGrid"></div>
+            
+            <div id="playersList"></div>
+            
+            <div>
+                <button class="btn" id="createRoomBtn">Создать комнату</button>
+                <button class="btn" id="joinRoomBtn">Присоединиться</button>
+                <input type="text" id="roomInput" placeholder="ID комнаты" 
+                       style="padding: 15px; font-size: 20px; border-radius: 5px; border: 2px solid #333; background: #111; color: white; margin: 10px;">
+                <button class="btn" id="startGameBtn" disabled>Начать игру</button>
+            </div>
+        </div>
+        <div id="score" style="display:none;">0 : 0</div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        import { getDatabase, ref, set, onValue, update, get, child, push } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
+
+        // Firebase конфигурация (замените на свою)
+        const firebaseConfig = {
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_AUTH_DOMAIN",
+            databaseURL: "YOUR_DATABASE_URL",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_STORAGE_BUCKET",
+            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+            appId: "YOUR_APP_ID"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        // Конфигурация персонажей
+        const CHARACTER_TYPES = {
+            "Hulk": { name: "ХАЛК", base_radius: 45, desc: "Огромный размер\n\nСпособность делает его гигантом на время", cd: 8.0 },
+            "Isagi": { name: "ИСАГИ", base_radius: 35, desc: "Мета-видение\n\nВидит траекторию мяча и ставит щит", cd: 10.0 },
+            "Rin": { name: "РИН", base_radius: 35, desc: "Кручёные удары\n\nУвеличивает вражеские ворота и станит врага", cd: 8.0 },
+            "Pudge": { name: "ПУДЖ", base_radius: 40, desc: "Мясник\n\nС мячом: ROT\nБез мяча: Meat Hook", cd: 10.0 },
+            "Aiku": { name: "АЙКУ", base_radius: 38, desc: "Расцветающий цветок\n\nТелепортируется к мячу в защите", cd: 15.0 },
+            "Kaiser": { name: "КАЙЗЕР", base_radius: 36, desc: "Импакт Кайзера\n\nУсиленные удары и быстрые рывки", cd: 10.0 },
+            "Nagi": { name: "НАГИ", base_radius: 37, desc: "Гений Ловушки\n\n50% шкалы: Black Hole Trap\n100% шкалы: 5-зарядный Револьвер", cd: 10.0 },
+            "Dio": { name: "ДИО", base_radius: 38, desc: "THE WORLD\n\nТайм-стоп или Checkmate.", cd: 20.0 },
+            "Naruto": { name: "НАРУТО", base_radius: 37, desc: "Каунтер\n\nАура с хвостами. При попытке отбора - отталкивание и бафф", cd: 12.0 },
+            "Maharaga": { name: "МАХАРАГА", base_radius: 38, desc: "Адаптация\n\nКат-сцена: колесо над головой\nАдаптирует способность противника", cd: 15.0 }
+        };
+
+        // Состояние игры
+        let gameState = {
+            roomId: null,
+            playerId: null,
+            selectedChar: null,
+            gameStarted: false,
+            canvas: null,
+            ctx: null,
+            keys: {},
+            players: {},
+            ball: null,
+            score: [0, 0],
+            lastUpdateTime: 0
+        };
+
+        // Инициализация меню
+        function initMenu() {
+            const charGrid = document.getElementById('charGrid');
+            charGrid.innerHTML = '';
+            
+            for (const [key, char] of Object.entries(CHARACTER_TYPES)) {
+                const card = document.createElement('div');
+                card.className = 'char-card';
+                card.innerHTML = `
+                    <h3>${char.name}</h3>
+                    <p>${char.desc}</p>
+                `;
+                card.onclick = () => selectCharacter(key, card);
+                charGrid.appendChild(card);
+            }
+
+            document.getElementById('createRoomBtn').onclick = createRoom;
+            document.getElementById('joinRoomBtn').onclick = joinRoom;
+            document.getElementById('startGameBtn').onclick = startGame;
+        }
+
+        function selectCharacter(charKey, cardElement) {
+            document.querySelectorAll('.char-card').forEach(c => c.classList.remove('selected'));
+            cardElement.classList.add('selected');
+            gameState.selectedChar = charKey;
+        }
+
+        async function createRoom() {
+            if (!gameState.selectedChar) {
+                alert('Выберите персонажа!');
+                return;
+            }
+
+            const roomId = Math.random().toString(36).substring(2, 8).toUpperCase();
+            gameState.roomId = roomId;
+            gameState.playerId = 'player1';
+
+            const roomRef = ref(db, `rooms/${roomId}`);
+            await set(roomRef, {
+                player1: {
+                    char: gameState.selectedChar,
+                    ready: true
+                },
+                player2: null,
+                gameState: null,
+                status: 'waiting'
+            });
+
+            document.getElementById('roomId').textContent = roomId;
+            document.getElementById('roomInfo').style.display = 'block';
+            document.getElementById('createRoomBtn').disabled = true;
+            document.getElementById('joinRoomBtn').disabled = true;
+
+            listenForOpponent();
+            checkGameStart();
+        }
+
+        async function joinRoom() {
+            if (!gameState.selectedChar) {
+                alert('Выберите персонажа!');
+                return;
+            }
+
+            const roomId = document.getElementById('roomInput').value.toUpperCase();
+            if (!roomId) {
+                alert('Введите ID комнаты!');
+                return;
+            }
+
+            const roomRef = ref(db, `rooms/${roomId}`);
+            const snapshot = await get(roomRef);
+            
+            if (!snapshot.exists()) {
+                alert('Комната не найдена!');
+                return;
+            }
+
+            const roomData = snapshot.val();
+            if (roomData.player2) {
+                alert('Комната заполнена!');
+                return;
+            }
+
+            gameState.roomId = roomId;
+            gameState.playerId = 'player2';
+
+            await update(roomRef, {
+                'player2': {
+                    char: gameState.selectedChar,
+                    ready: true
+                },
+                status: 'ready'
+            });
+
+            document.getElementById('roomId').textContent = roomId;
+            document.getElementById('roomInfo').style.display = 'block';
+            document.getElementById('createRoomBtn').disabled = true;
+            document.getElementById('joinRoomBtn').disabled = true;
+
+            listenForGameStart();
+        }
+
+        function listenForOpponent() {
+            const roomRef = ref(db, `rooms/${gameState.roomId}`);
+            onValue(roomRef, (snapshot) => {
+                const data = snapshot.val();
+                if (data.player2) {
+                    document.getElementById('startGameBtn').disabled = false;
+                    document.getElementById('playersList').textContent = 
+                        'Игрок 2 присоединился!';
+                }
+            });
+        }
+
+        function listenForGameStart() {
+            const roomRef = ref(db, `rooms/${gameState.roomId}`);
+            onValue(roomRef, (snapshot) => {
+                const data = snapshot.val();
+                if (data.status === 'playing') {
+                    document.getElementById('menu').style.display = 'none';
+                    document.getElementById('score').style.display = 'block';
+                    initGame(data);
+                }
+            });
+        }
+
+        async function startGame() {
+            const roomRef = ref(db, `rooms/${gameState.roomId}`);
+            await update(roomRef, {
+                status: 'playing',
+                gameState: initializeGameState()
+            });
+        }
+
+        function initializeGameState() {
+            const canvas = document.getElementById('gameCanvas');
+            const SW = window.innerWidth;
+            const SH = window.innerHeight;
+            canvas.width = SW;
+            canvas.height = SH;
+
+            return {
+                sw: SW,
+                sh: SH,
+                ball: {
+                    x: SW / 2,
+                    y: SH / 2,
+                    dx: 0,
+                    dy: 0,
+                    radius: 24
+                },
+                score: [0, 0],
+                timestamp: Date.now()
+            };
+        }
+
+        function initGame(roomData) {
+            gameState.gameStarted = true;
+            gameState.canvas = document.getElementById('gameCanvas');
+            gameState.ctx = gameState.canvas.getContext('2d');
+            
+            gameState.ball = {
+                x: window.innerWidth / 2,
+                y: window.innerHeight / 2,
+                dx: 0,
+                dy: 0,
+                radius: 24
+            };
+
+            // Создаем игроков
+            const p1Char = roomData.player1.char;
+            const p2Char = roomData.player2.char;
+
+            gameState.players = {
+                player1: createPlayer(window.innerWidth * 0.2, window.innerHeight / 2, '#0d47a1', p1Char),
+                player2: createPlayer(window.innerWidth * 0.8, window.innerHeight / 2, '#b71c1c', p2Char)
+            };
+
+            setupControls();
+            
+            // Слушаем обновления от другого игрока
+            listenForGameUpdates();
+            
+            // Запускаем игровой цикл
+            gameLoop();
+        }
+
+        function createPlayer(x, y, color, charType) {
+            return {
+                x: x,
+                y: y,
+                angle: 0,
+                color: color,
+                radius: CHARACTER_TYPES[charType].base_radius,
+                speed: 11,
+                charType: charType,
+                dribbling: false
+            };
+        }
+
+        function setupControls() {
+            const myPlayer = gameState.playerId === 'player1' ? gameState.players.player1 : gameState.players.player2;
+            
+            document.addEventListener('keydown', (e) => {
+                gameState.keys[e.key] = true;
+                
+                if (e.key === ' ') {
+                    handleKick(myPlayer);
+                }
+                if (e.key === 'w' || e.key === 'W') {
+                    handleDash(myPlayer);
+                }
+            });
+
+            document.addEventListener('keyup', (e) => {
+                gameState.keys[e.key] = false;
+            });
+
+            // Мобильные контролы
+            const controls = document.getElementById('controls');
+            controls.style.display = 'flex';
+            controls.innerHTML = `
+                <button class="control-btn" id="upBtn">▲</button>
+                <button class="control-btn" id="kickBtn">⚽</button>
+                <button class="control-btn" id="dashBtn">💨</button>
+            `;
+
+            document.getElementById('upBtn').addEventListener('touchstart', () => handleMove(myPlayer, 'forward'));
+            document.getElementById('upBtn').addEventListener('touchend', () => gameState.keys['w'] = false);
+            
+            document.getElementById('kickBtn').addEventListener('touchstart', () => handleKick(myPlayer));
+            document.getElementById('dashBtn').addEventListener('touchstart', () => handleDash(myPlayer));
+        }
+
+        function handleMove(player, direction) {
+            if (direction === 'forward') {
+                gameState.keys['w'] = true;
+            }
+        }
+
+        function handleKick(player) {
+            if (!player.dribbling) return;
+            
+            const power = 42;
+            const ball = gameState.ball;
+            
+            ball.dx = Math.cos(player.angle) * power;
+            ball.dy = Math.sin(player.angle) * power;
+            ball.dribbler = null;
+            player.dribbling = false;
+            
+            // Отправляем обновление в Firebase
+            updateGameState();
+        }
+
+        function handleDash(player) {
+            // Простая реализация рывка
+            const dashDist = 200;
+            player.x += Math.cos(player.angle) * dashDist;
+            player.y += Math.sin(player.angle) * dashDist;
+            
+            if (player.dribbling) {
+                gameState.ball.x = player.x + Math.cos(player.angle) * (player.radius + gameState.ball.radius + 2);
+                gameState.ball.y = player.y + Math.sin(player.angle) * (player.radius + gameState.ball.radius + 2);
+            }
+            
+            updateGameState();
+        }
+
+        function updatePlayerPosition(player) {
+            const speed = player.speed * (player.dribbling ? 0.7 : 1);
+            
+            if (gameState.keys['a'] || gameState.keys['ArrowLeft']) {
+                player.angle -= 0.15;
+            }
+            if (gameState.keys['d'] || gameState.keys['ArrowRight']) {
+                player.angle += 0.15;
+            }
+            if (gameState.keys['w'] || gameState.keys['ArrowUp']) {
+                player.x += Math.cos(player.angle) * speed;
+                player.y += Math.sin(player.angle) * speed;
+            }
+            if (gameState.keys['s'] || gameState.keys['ArrowDown']) {
+                player.x -= Math.cos(player.angle) * speed * 0.6;
+                player.y -= Math.sin(player.angle) * speed * 0.6;
+            }
+
+            // Границы поля
+            player.x = Math.max(player.radius, Math.min(gameState.canvas.width - player.radius, player.x));
+            player.y = Math.max(player.radius, Math.min(gameState.canvas.height - player.radius, player.y));
+        }
+
+        function checkBallPickup(player) {
+            const ball = gameState.ball;
+            if (!ball.dribbler && Math.hypot(player.x - ball.x, player.y - ball.y) < player.radius + ball.radius + 12) {
+                ball.dribbler = player;
+                player.dribbling = true;
+            }
+        }
+
+        function updateBall() {
+            const ball = gameState.ball;
+            
+            if (ball.dribbler) {
+                ball.x = ball.dribbler.x + Math.cos(ball.dribbler.angle) * (ball.dribbler.radius + ball.radius + 2);
+                ball.y = ball.dribbler.y + Math.sin(ball.dribbler.angle) * (ball.dribbler.radius + ball.radius + 2);
+            } else {
+                ball.x += ball.dx;
+                ball.y += ball.dy;
+                ball.dx *= 0.97;
+                ball.dy *= 0.97;
+            }
+
+            // Границы
+            if (ball.x < ball.radius || ball.x > gameState.canvas.width - ball.radius) {
+                ball.dx *= -1;
+                ball.x = Math.max(ball.radius, Math.min(gameState.canvas.width - ball.radius, ball.x));
+            }
+            if (ball.y < ball.radius || ball.y > gameState.canvas.height - ball.radius) {
+                ball.dy *= -1;
+                ball.y = Math.max(ball.radius, Math.min(gameState.canvas.height - ball.radius, ball.y));
+            }
+
+            // Голы
+            checkGoal();
+        }
+
+        function checkGoal() {
+            const ball = gameState.ball;
+            const goalHeight = 450;
+            const goalY1 = gameState.canvas.height / 2 - goalHeight / 2;
+            const goalY2 = gameState.canvas.height / 2 + goalHeight / 2;
+
+            if (goalY1 < ball.y && ball.y < goalY2 && ball.x <= ball.radius) {
+                gameState.score[1]++;
+                resetBall();
+                updateGameState();
+            } else if (goalY1 < ball.y && ball.y < goalY2 && ball.x >= gameState.canvas.width - ball.radius) {
+                gameState.score[0]++;
+                resetBall();
+                updateGameState();
+            }
+        }
+
+        function resetBall() {
+            gameState.ball.x = gameState.canvas.width / 2;
+            gameState.ball.y = gameState.canvas.height / 2;
+            gameState.ball.dx = 0;
+            gameState.ball.dy = 0;
+            gameState.ball.dribbler = null;
+        }
+
+        function updateGameState() {
+            if (!gameState.roomId) return;
+
+            const roomRef = ref(db, `rooms/${gameState.roomId}`);
+            update(roomRef, {
+                [`players/${gameState.playerId}`]: gameState.players[gameState.playerId],
+                ball: gameState.ball,
+                score: gameState.score,
+                timestamp: Date.now()
+            });
+        }
+
+        function listenForGameUpdates() {
+            const roomRef = ref(db, `rooms/${gameState.roomId}`);
+            const opponentId = gameState.playerId === 'player1' ? 'player2' : 'player1';
+
+            onValue(roomRef, (snapshot) => {
+                const data = snapshot.val();
+                if (!data || !data.players) return;
+
+                // Обновляем позицию противника
+                if (data.players[opponentId]) {
+                    gameState.players[opponentId] = {
+                        ...gameState.players[opponentId],
+                        ...data.players[opponentId]
+                    };
+                }
+
+                // Обновляем мяч (только если пришло обновление от другого игрока)
+                if (data.ball && data.ball.dribbler) {
+                    gameState.ball = { ...gameState.ball, ...data.ball };
+                }
+
+                // Обновляем счет
+                if (data.score) {
+                    gameState.score = data.score;
+                    document.getElementById('score').textContent = `${gameState.score[0]} : ${gameState.score[1]}`;
+                }
+            });
+        }
+
+        function draw() {
+            const ctx = gameState.ctx;
+            const canvas = gameState.canvas;
+            
+            // Очистка
+            ctx.fillStyle = '#007539';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Разметка поля
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 2;
+            
+            // Центральная линия
+            ctx.beginPath();
+            ctx.moveTo(canvas.width / 2, 0);
+            ctx.lineTo(canvas.width / 2, canvas.height);
+            ctx.stroke();
+
+            // Центральный круг
+            ctx.beginPath();
+            ctx.arc(canvas.width / 2, canvas.height / 2, 100, 0, Math.PI * 2);
+            ctx.stroke();
+
+            // Ворота
+            const goalHeight = 450;
+            ctx.fillStyle = '#1e88e5';
+            ctx.fillRect(0, canvas.height / 2 - goalHeight / 2, 25, goalHeight);
+            ctx.fillStyle = '#e53935';
+            ctx.fillRect(canvas.width - 25, canvas.height / 2 - goalHeight / 2, 25, goalHeight);
+
+            // Игроки
+            for (const player of Object.values(gameState.players)) {
+                // Тело игрока
+                ctx.fillStyle = player.color;
+                ctx.beginPath();
+                ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = '#ffffff';
+                ctx.stroke();
+
+                // Направление
+                ctx.beginPath();
+                ctx.moveTo(player.x, player.y);
+                ctx.lineTo(
+                    player.x + Math.cos(player.angle) * player.radius,
+                    player.y + Math.sin(player.angle) * player.radius
+                );
+                ctx.stroke();
+
+                // Имя персонажа
+                ctx.fillStyle = '#ffffff';
+                ctx.font = '16px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText(
+                    CHARACTER_TYPES[player.charType].name,
+                    player.x,
+                    player.y - player.radius - 10
+                );
+            }
+
+            // Мяч
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.arc(gameState.ball.x, gameState.ball.y, gameState.ball.radius, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = '#333333';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+        }
+
+        function gameLoop() {
+            if (!gameState.gameStarted) return;
+
+            const myPlayer = gameState.players[gameState.playerId];
+            const opponent = gameState.players[gameState.playerId === 'player1' ? 'player2' : 'player1'];
+
+            updatePlayerPosition(myPlayer);
+            checkBallPickup(myPlayer);
+            checkBallPickup(opponent);
+            updateBall();
+            
+            draw();
+            
+            // Отправляем обновления 10 раз в секунду
+            if (Date.now() - gameState.lastUpdateTime > 100) {
+                updateGameState();
+                gameState.lastUpdateTime = Date.now();
+            }
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Запуск
+        initMenu();
+    </script>
+</body>
+</html>
