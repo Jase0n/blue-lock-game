@@ -216,7 +216,7 @@
             storageBucket: "bluelock-1d9bb.firebasestorage.app",
             messagingSenderId: "1021397810745",
             appId: "1:1021397810745:web:687341d15a647a25a997e8",
-			measurementId: "G-HFJ1F7DM4S"
+            measurementId: "G-HFJ1F7DM4S"
         };
 
         const app = initializeApp(firebaseConfig);
@@ -305,7 +305,7 @@
             document.getElementById('joinRoomBtn').disabled = true;
 
             listenForOpponent();
-            checkGameStart();
+            // checkGameStart(); <- ОШИБКА БЫЛА ЗДЕСЬ (Удалено)
         }
 
         async function joinRoom() {
@@ -417,7 +417,8 @@
                 y: window.innerHeight / 2,
                 dx: 0,
                 dy: 0,
-                radius: 24
+                radius: 24,
+                dribbler: null
             };
 
             // Создаем игроков
@@ -430,11 +431,7 @@
             };
 
             setupControls();
-            
-            // Слушаем обновления от другого игрока
             listenForGameUpdates();
-            
-            // Запускаем игровой цикл
             gameLoop();
         }
 
@@ -452,7 +449,7 @@
         }
 
         function setupControls() {
-            const myPlayer = gameState.playerId === 'player1' ? gameState.players.player1 : gameState.players.player2;
+            const myPlayer = gameState.players[gameState.playerId];
             
             document.addEventListener('keydown', (e) => {
                 gameState.keys[e.key] = true;
@@ -502,12 +499,10 @@
             ball.dribbler = null;
             player.dribbling = false;
             
-            // Отправляем обновление в Firebase
             updateGameState();
         }
 
         function handleDash(player) {
-            // Простая реализация рывка
             const dashDist = 200;
             player.x += Math.cos(player.angle) * dashDist;
             player.y += Math.sin(player.angle) * dashDist;
@@ -543,10 +538,11 @@
             player.y = Math.max(player.radius, Math.min(gameState.canvas.height - player.radius, player.y));
         }
 
-        function checkBallPickup(player) {
+        // ИСПРАВЛЕНИЕ 2: Храним в dribbler строку (ID игрока), а не весь объект игрока
+        function checkBallPickup(player, id) {
             const ball = gameState.ball;
             if (!ball.dribbler && Math.hypot(player.x - ball.x, player.y - ball.y) < player.radius + ball.radius + 12) {
-                ball.dribbler = player;
+                ball.dribbler = id;
                 player.dribbling = true;
             }
         }
@@ -554,14 +550,29 @@
         function updateBall() {
             const ball = gameState.ball;
             
+            // ИСПРАВЛЕНИЕ 3: Если мяч летит свободно, его физику просчитывает только хост (player1)
+            // Это предотвращает телепортацию и дерганье мяча на клиентах
+            if (!ball.dribbler && gameState.playerId !== 'player1') {
+                return;
+            }
+
             if (ball.dribbler) {
-                ball.x = ball.dribbler.x + Math.cos(ball.dribbler.angle) * (ball.dribbler.radius + ball.radius + 2);
-                ball.y = ball.dribbler.y + Math.sin(ball.dribbler.angle) * (ball.dribbler.radius + ball.radius + 2);
+                // ИСПРАВЛЕНИЕ 2: Находим игрока по его ID
+                const dribblerPlayer = gameState.players[ball.dribbler];
+                if (dribblerPlayer) {
+                    ball.x = dribblerPlayer.x + Math.cos(dribblerPlayer.angle) * (dribblerPlayer.radius + ball.radius + 2);
+                    ball.y = dribblerPlayer.y + Math.sin(dribblerPlayer.angle) * (dribblerPlayer.radius + ball.radius + 2);
+                }
             } else {
                 ball.x += ball.dx;
                 ball.y += ball.dy;
                 ball.dx *= 0.97;
                 ball.dy *= 0.97;
+                
+                // ИСПРАВЛЕНИЕ 3: Голы регистрирует только хост
+                if (gameState.playerId === 'player1') {
+                    checkGoal();
+                }
             }
 
             // Границы
@@ -573,9 +584,6 @@
                 ball.dy *= -1;
                 ball.y = Math.max(ball.radius, Math.min(gameState.canvas.height - ball.radius, ball.y));
             }
-
-            // Голы
-            checkGoal();
         }
 
         function checkGoal() {
@@ -631,9 +639,11 @@
                     };
                 }
 
-                // Обновляем мяч (только если пришло обновление от другого игрока)
-                if (data.ball && data.ball.dribbler) {
-                    gameState.ball = { ...gameState.ball, ...data.ball };
+                // ИСПРАВЛЕНИЕ 4: Правильно принимаем данные мяча от соперника или от хоста
+                if (data.ball) {
+                    if (data.ball.dribbler !== gameState.playerId) {
+                        gameState.ball = { ...gameState.ball, ...data.ball };
+                    }
                 }
 
                 // Обновляем счет
@@ -717,14 +727,17 @@
         function gameLoop() {
             if (!gameState.gameStarted) return;
 
+            const opponentId = gameState.playerId === 'player1' ? 'player2' : 'player1';
             const myPlayer = gameState.players[gameState.playerId];
-            const opponent = gameState.players[gameState.playerId === 'player1' ? 'player2' : 'player1'];
+            const opponent = gameState.players[opponentId];
 
             updatePlayerPosition(myPlayer);
-            checkBallPickup(myPlayer);
-            checkBallPickup(opponent);
-            updateBall();
             
+            // Передаем правильные ID для фикса Firebase
+            checkBallPickup(myPlayer, gameState.playerId);
+            checkBallPickup(opponent, opponentId);
+            
+            updateBall();
             draw();
             
             // Отправляем обновления 10 раз в секунду
