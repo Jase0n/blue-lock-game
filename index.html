@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Blue Lock  - Multiplayer</title>
+    <title>Blue Lock - Multiplayer</title>
     <style>
         * {
             margin: 0;
@@ -256,7 +256,9 @@
             },
             ball: { x: 0, y: 0, dx: 0, dy: 0, radius: 24, dribbler: null, curve: 0 },
             score: [0, 0],
-            lastUpdateTime: 0
+            lastUpdateTime: 0,
+            particles: [],
+            stealCooldowns: {}
         };
 
         function initMenu() {
@@ -375,8 +377,8 @@
                     red: { y: SH / 2 }
                 },
                 players: {
-                    player1: { x: SW * 0.2, y: SH / 2, angle: 0, color: '#0d47a1', charType: roomData.player1.char, radius: CHARACTER_TYPES[roomData.player1.char].base_radius, speed: 11, dribbling: false, auraActive: false, cdUntil: 0, stunnedUntil: 0, skillTime: 0, skillType: "" },
-                    player2: { x: SW * 0.8, y: SH / 2, angle: Math.PI, color: '#b71c1c', charType: roomData.player2.char, radius: CHARACTER_TYPES[roomData.player2.char].base_radius, speed: 11, dribbling: false, auraActive: false, cdUntil: 0, stunnedUntil: 0, skillTime: 0, skillType: "" }
+                    player1: { x: SW * 0.2, y: SH / 2, angle: 0, color: '#0d47a1', charType: roomData.player1.char, radius: CHARACTER_TYPES[roomData.player1.char].base_radius, speed: 11, dribbling: false, auraActive: false, cdUntil: 0, stunnedUntil: 0, skillTime: 0, skillType: "", stealCooldown: 0, shieldActive: false, shieldEndTime: 0 },
+                    player2: { x: SW * 0.8, y: SH / 2, angle: Math.PI, color: '#b71c1c', charType: roomData.player2.char, radius: CHARACTER_TYPES[roomData.player2.char].base_radius, speed: 11, dribbling: false, auraActive: false, cdUntil: 0, stunnedUntil: 0, skillTime: 0, skillType: "", stealCooldown: 0, shieldActive: false, shieldEndTime: 0 }
                 }
             });
         }
@@ -391,6 +393,8 @@
             gameState.ball = roomData.ball;
             gameState.score = roomData.score || [0, 0];
             gameState.players = roomData.players;
+            gameState.stealCooldowns = {};
+            gameState.particles = [];
             
             if (roomData.gks) {
                 gameState.gks.blue.y = roomData.gks.blue.y;
@@ -405,7 +409,10 @@
         function setupControls() {
             document.addEventListener('keydown', (e) => {
                 gameState.keys[e.key] = true;
-                if (e.key === ' ') handleKick();
+                if (e.key === ' ') {
+                    e.preventDefault();
+                    handleKick();
+                }
                 if (e.key === 'w' || e.key === 'W' || e.key === 'ц' || e.key === 'Ц') handleDash();
             });
             document.addEventListener('keyup', (e) => {
@@ -422,13 +429,11 @@
 
             player.cdUntil = now + CHARACTER_TYPES[player.charType].cd * 1000;
             player.auraActive = true;
-            player.auraEndTime = now + 3000; // Аура активна 3 секунды
+            player.auraEndTime = now + 3000;
 
-            // Сигнализируем сетевому оппоненту об использовании способности
             player.skillType = player.charType;
             player.skillTime = now;
 
-            // Мгновенные перемещения / изменения размеров (считаются локально)
             if (player.charType === 'Hulk') {
                 player.radius = CHARACTER_TYPES.Hulk.base_radius * 1.6;
             } else if (player.charType === 'Aiku') {
@@ -437,8 +442,22 @@
                     player.x = gameState.ball.x - Math.cos(player.angle) * (player.radius + gameState.ball.radius + 15);
                     player.y = gameState.ball.y - Math.sin(player.angle) * (player.radius + gameState.ball.radius + 15);
                 }
+            } else if (player.charType === 'Isagi') {
+                // Исаги: щит у ворот + ускорение
+                player.shieldActive = true;
+                player.shieldEndTime = now + 3000;
+                // Если мяч рядом и свободен - забираем с эффектом
+                if (!gameState.ball.dribbler && Math.hypot(player.x - gameState.ball.x, player.y - gameState.ball.y) < 200) {
+                    player.dribbling = true;
+                    gameState.ball.dribbler = gameState.playerId;
+                    gameState.ball.dx = 0;
+                    gameState.ball.dy = 0;
+                    // Создаем частицы-пазлы
+                    spawnPuzzleParticles(gameState.ball.x, gameState.ball.y);
+                }
+                player.x += Math.cos(player.angle) * 130;
+                player.y += Math.sin(player.angle) * 130;
             } else if (player.charType !== 'Pudge' && player.charType !== 'Nagi' && player.charType !== 'Dio' && player.charType !== 'Maharaga') {
-                // Стандартный микровзрыв скорости вперед
                 player.x += Math.cos(player.angle) * 130;
                 player.y += Math.sin(player.angle) * 130;
             }
@@ -446,11 +465,31 @@
             updateGameState();
         }
 
+        function spawnPuzzleParticles(x, y) {
+            const colors = ['#00ffff', '#448aff', '#00e5ff', '#40c4ff', '#80deea'];
+            for (let i = 0; i < 20; i++) {
+                const angle = (Math.PI * 2 * i) / 20;
+                const speed = 3 + Math.random() * 5;
+                gameState.particles.push({
+                    x: x,
+                    y: y,
+                    dx: Math.cos(angle) * speed,
+                    dy: Math.sin(angle) * speed,
+                    life: 1.0,
+                    decay: 0.02 + Math.random() * 0.03,
+                    size: 8 + Math.random() * 12,
+                    color: colors[Math.floor(Math.random() * colors.length)],
+                    rotation: Math.random() * Math.PI * 2,
+                    rotSpeed: (Math.random() - 0.5) * 0.2
+                });
+            }
+        }
+
         function handleKick() {
             const player = gameState.players[gameState.playerId];
             if (!player || !player.dribbling) return;
 
-            let power = (player.charType === 'Kaiser') ? 56 : 39;
+            let power = (player.charType === 'Kaiser' && player.auraActive) ? 56 : 39;
             
             const kickData = {
                 dx: Math.cos(player.angle) * power,
@@ -459,19 +498,51 @@
             };
 
             player.dribbling = false;
-
-            if (gameState.playerId === 'player1') {
-                // Хост применяет пнуть мяч прямо на месте
-                gameState.ball.dx = kickData.dx;
-                gameState.ball.dy = kickData.dy;
-                gameState.ball.curve = kickData.curve;
-                gameState.ball.dribbler = null;
-            } else {
-                // Игрок 2 передает намерение удара Хосту через сетевую структуру
-                player.kickIntent = kickData;
-            }
+            gameState.ball.dribbler = null;
+            gameState.ball.dx = kickData.dx;
+            gameState.ball.dy = kickData.dy;
+            gameState.ball.curve = kickData.curve;
 
             updateGameState();
+        }
+
+        function attemptStealBall(stealer, victim, stealerId, victimId) {
+            const now = Date.now();
+            
+            // Проверка кулдауна на отбор
+            if (gameState.stealCooldowns[stealerId] && now < gameState.stealCooldowns[stealerId]) return;
+            
+            // Проверка что жертва не в иммунитете после отбора
+            if (gameState.stealCooldowns[victimId] && now < gameState.stealCooldowns[victimId] && 
+                gameState.stealCooldowns[victimId] - now > 700) return;
+            
+            // Дистанция для отбора
+            const dist = Math.hypot(stealer.x - victim.x, stealer.y - victim.y);
+            if (dist < stealer.radius + victim.radius + 15) {
+                // Проверка Наруто контр-атаки
+                if (victim.charType === 'Naruto' && victim.auraActive) {
+                    stealer.stunnedUntil = now + 1000;
+                    stealer.x -= Math.cos(stealer.angle) * 110;
+                    stealer.y -= Math.sin(stealer.angle) * 110;
+                    return;
+                }
+
+                // Отбор мяча
+                victim.dribbling = false;
+                stealer.dribbling = true;
+                gameState.ball.dribbler = stealerId;
+                
+                // Установка кулдаунов
+                gameState.stealCooldowns[stealerId] = now + 300; // 0.3с нельзя отобрать у отобравшего
+                gameState.stealCooldowns[victimId] = now + 300; // 0.3с жертва не может отобрать обратно
+                
+                // Обновление позиции мяча
+                gameState.ball.x = stealer.x + Math.cos(stealer.angle) * (stealer.radius + gameState.ball.radius + 2);
+                gameState.ball.y = stealer.y + Math.sin(stealer.angle) * (stealer.radius + gameState.ball.radius + 2);
+                gameState.ball.dx = 0;
+                gameState.ball.dy = 0;
+                gameState.ball.curve = 0;
+            }
         }
 
         function updatePlayerPosition(player) {
@@ -479,9 +550,15 @@
             const now = Date.now();
             if (now < player.stunnedUntil) return;
 
+            // Проверка окончания щита Исаги
+            if (player.shieldActive && now > player.shieldEndTime) {
+                player.shieldActive = false;
+            }
+
             if (player.auraActive && now > player.auraEndTime) {
                 player.auraActive = false;
                 if (player.charType === 'Hulk') player.radius = CHARACTER_TYPES.Hulk.base_radius;
+                if (player.charType === 'Isagi') player.shieldActive = false;
             }
 
             let currentSpeed = player.speed * (player.dribbling ? 0.75 : 1);
@@ -508,23 +585,14 @@
             if (!player || gameState.ball.dribbler) return;
             const now = Date.now();
             if (now < player.stunnedUntil) return;
+            if (gameState.stealCooldowns[id] && now < gameState.stealCooldowns[id]) return;
 
             if (Math.hypot(player.x - gameState.ball.x, player.y - gameState.ball.y) < player.radius + gameState.ball.radius + 10) {
-                // Проверка пассивной защиты Наруто (контр-атака ауры)
-                const oppId = id === 'player1' ? 'player2' : 'player1';
-                const opp = gameState.players[oppId];
-                if (opp && opp.charType === 'Naruto' && opp.auraActive) {
-                    player.stunnedUntil = now + 1000;
-                    player.x -= Math.cos(player.angle) * 110;
-                    player.y -= Math.sin(player.angle) * 110;
-                    return;
-                }
-
                 player.dribbling = true;
-                if (gameState.playerId === 'player1') {
-                    gameState.ball.dribbler = id;
-                    gameState.ball.curve = 0;
-                }
+                gameState.ball.dribbler = id;
+                gameState.ball.dx = 0;
+                gameState.ball.dy = 0;
+                gameState.ball.curve = 0;
             }
         }
 
@@ -532,7 +600,43 @@
             const ball = gameState.ball;
             if (!ball) return;
 
-            // Если мяч ведут — фиксируем его позицию перед игроком
+            // Проверка щита Исаги (только для player1 как хоста)
+            if (gameState.playerId === 'player1') {
+                const p1 = gameState.players.player1;
+                const p2 = gameState.players.player2;
+                
+                // Щит Исаги для синих ворот
+                if (p1 && p1.shieldActive) {
+                    const blueGoalX = 50;
+                    const blueGoalY1 = gameState.canvas.height / 2 - 225;
+                    const blueGoalY2 = gameState.canvas.height / 2 + 225;
+                    
+                    if (ball.x < 100 && ball.y > blueGoalY1 - 50 && ball.y < blueGoalY2 + 50) {
+                        if (ball.dx < 0) {
+                            ball.dx *= -1.5;
+                            ball.dy *= 0.5;
+                            // Создаем частицы при блокировке
+                            spawnPuzzleParticles(ball.x, ball.y);
+                        }
+                    }
+                }
+                
+                // Щит Исаги для красных ворот
+                if (p2 && p2.shieldActive) {
+                    const redGoalX = gameState.canvas.width - 50;
+                    const redGoalY1 = gameState.canvas.height / 2 - 225;
+                    const redGoalY2 = gameState.canvas.height / 2 + 225;
+                    
+                    if (ball.x > gameState.canvas.width - 100 && ball.y > redGoalY1 - 50 && ball.y < redGoalY2 + 50) {
+                        if (ball.dx > 0) {
+                            ball.dx *= -1.5;
+                            ball.dy *= 0.5;
+                            spawnPuzzleParticles(ball.x, ball.y);
+                        }
+                    }
+                }
+            }
+
             if (ball.dribbler) {
                 const holder = gameState.players[ball.dribbler];
                 if (holder) {
@@ -542,20 +646,16 @@
                     ball.dy = 0;
                 }
             } else {
-                // Все расчеты свободного полета делает исключительно ХОСТ (Player 1)
                 if (gameState.playerId === 'player1') {
-                    
-                    // Обработка удара от Игрока 2 (считываем намерение)
                     const p2 = gameState.players.player2;
                     if (p2 && p2.kickIntent) {
                         ball.dx = p2.kickIntent.dx;
                         ball.dy = p2.kickIntent.dy;
                         ball.curve = p2.kickIntent.curve;
                         ball.dribbler = null;
-                        delete p2.kickIntent; // Сбрасываем триггер
+                        delete p2.kickIntent;
                     }
 
-                    // Закрутка Рина
                     if (ball.curve && Math.hypot(ball.dx, ball.dy) > 1) {
                         let angle = Math.atan2(ball.dy, ball.dx) + ball.curve * 0.03;
                         let speed = Math.hypot(ball.dx, ball.dy);
@@ -569,23 +669,20 @@
                     ball.dx *= 0.98;
                     ball.dy *= 0.98;
 
-                    // --- ИИ ВРАТАРЕЙ ---
+                    // ИИ вратарей
                     const centerGoalY = gameState.canvas.height / 2;
-                    const gkLimit = 220; 
+                    const gkLimit = 220;
 
-                    // Синий бот
                     let targetYBlue = ball.y;
                     if (ball.x > gameState.canvas.width / 2) targetYBlue = centerGoalY;
                     gameState.gks.blue.y += (targetYBlue - gameState.gks.blue.y) * 0.12;
                     gameState.gks.blue.y = Math.max(centerGoalY - gkLimit, Math.min(centerGoalY + gkLimit, gameState.gks.blue.y));
 
-                    // Красный бот
                     let targetYRed = ball.y;
                     if (ball.x < gameState.canvas.width / 2) targetYRed = centerGoalY;
                     gameState.gks.red.y += (targetYRed - gameState.gks.red.y) * 0.12;
                     gameState.gks.red.y = Math.max(centerGoalY - gkLimit, Math.min(centerGoalY + gkLimit, gameState.gks.red.y));
 
-                    // Отбивание вратарями
                     if (Math.hypot(35 - ball.x, gameState.gks.blue.y - ball.y) < gameState.gks.blue.radius + ball.radius) {
                         ball.dx = Math.abs(ball.dx) * 1.2 + 8;
                         ball.curve = 0;
@@ -599,7 +696,7 @@
                 }
             }
 
-            // Физика отскоков от стен (считается локально для плавности рендеринга)
+            // Отскоки от стен
             if (ball.y < ball.radius) { ball.dy *= -1; ball.y = ball.radius; }
             if (ball.y > gameState.canvas.height - ball.radius) { ball.dy *= -1; ball.y = gameState.canvas.height - ball.radius; }
             
@@ -620,10 +717,12 @@
 
             if (ball.y >= goalY1 && ball.y <= goalY2) {
                 if (ball.x < 15) {
-                    gameState.score[1]++; // Забил красный
+                    gameState.score[1]++; // Красный забил
+                    document.getElementById('score').textContent = `${gameState.score[0]} : ${gameState.score[1]}`;
                     resetMatchPositions();
                 } else if (ball.x > gameState.canvas.width - 15) {
-                    gameState.score[0]++; // Забил синий
+                    gameState.score[0]++; // Синий забил
+                    document.getElementById('score').textContent = `${gameState.score[0]} : ${gameState.score[1]}`;
                     resetMatchPositions();
                 }
             }
@@ -645,14 +744,17 @@
             gameState.players.player1.angle = 0;
             gameState.players.player1.dribbling = false;
             gameState.players.player1.auraActive = false;
+            gameState.players.player1.shieldActive = false;
 
             gameState.players.player2.x = SW * 0.8;
             gameState.players.player2.y = SH / 2;
             gameState.players.player2.angle = Math.PI;
             gameState.players.player2.dribbling = false;
             gameState.players.player2.auraActive = false;
+            gameState.players.player2.shieldActive = false;
 
-            // Принудительно затираем узел всей комнаты хостом для синхронизации сброса
+            gameState.stealCooldowns = {};
+
             const roomRef = ref(db, `rooms/${gameState.roomId}`);
             update(roomRef, {
                 ball: gameState.ball,
@@ -665,7 +767,6 @@
             if (!gameState.roomId) return;
             
             if (gameState.playerId === 'player1') {
-                // Хост имеет монополию на изменения мяча, счета и вратарей
                 const updates = {
                     'players/player1': gameState.players.player1,
                     'ball': gameState.ball,
@@ -675,7 +776,6 @@
                 };
                 update(ref(db, `rooms/${gameState.roomId}`), updates);
             } else {
-                // Клиент отправляет ТОЛЬКО свою структуру, предотвращая сетевой шторм
                 const updates = {
                     'players/player2': gameState.players.player2
                 };
@@ -691,7 +791,6 @@
                 const data = snapshot.val();
                 if (!data) return;
 
-                // Синхронизация счета (событие гола)
                 if (data.score && (gameState.score[0] !== data.score[0] || gameState.score[1] !== data.score[1])) {
                     gameState.score = data.score;
                     document.getElementById('score').textContent = `${gameState.score[0]} : ${gameState.score[1]}`;
@@ -703,12 +802,10 @@
                     return;
                 }
 
-                // Синхронизация оппонента
                 if (data.players && data.players[oppId]) {
                     const oldOpp = gameState.players[oppId];
                     const newOpp = data.players[oppId];
                     
-                    // Реактивная проверка способностей оппонента
                     if (newOpp.skillTime && (!oldOpp || oldOpp.skillTime !== newOpp.skillTime)) {
                         const now = Date.now();
                         if (newOpp.skillType === 'Dio') {
@@ -717,21 +814,27 @@
                             if (Math.hypot(gameState.players[gameState.playerId].x - newOpp.x, gameState.players[gameState.playerId].y - newOpp.y) < 300) {
                                 gameState.players[gameState.playerId].stunnedUntil = now + 2000;
                             }
+                        } else if (newOpp.skillType === 'Isagi') {
+                            // При активации Исаги оппонентом создаем частицы
+                            if (!gameState.ball.dribbler) {
+                                spawnPuzzleParticles(gameState.ball.x, gameState.ball.y);
+                            }
                         }
                         
-                        // Взаимодействия со свободным мячом обрабатывает Хост
                         if (gameState.playerId === 'player1') {
                             if (newOpp.skillType === 'Pudge' && !gameState.ball.dribbler) {
                                 if (Math.hypot(newOpp.x - gameState.ball.x, newOpp.y - gameState.ball.y) < 350) {
                                     gameState.ball.x = newOpp.x;
                                     gameState.ball.y = newOpp.y;
                                     gameState.ball.dribbler = 'player2';
+                                    newOpp.dribbling = true;
                                 }
                             } else if (newOpp.skillType === 'Nagi' && !gameState.ball.dribbler) {
                                 if (Math.hypot(newOpp.x - gameState.ball.x, newOpp.y - gameState.ball.y) < 250) {
                                     gameState.ball.dx = 0;
                                     gameState.ball.dy = 0;
                                     gameState.ball.dribbler = 'player2';
+                                    newOpp.dribbling = true;
                                 }
                             }
                         }
@@ -739,7 +842,6 @@
                     gameState.players[oppId] = newOpp;
                 }
 
-                // Хост отдает клиенту данные мяча и ботов
                 if (gameState.playerId === 'player2') {
                     if (data.ball) gameState.ball = data.ball;
                     if (data.gks) {
@@ -747,7 +849,6 @@
                         gameState.gks.red.y = data.gks.red.y;
                     }
                 } else {
-                    // Хост забирает от клиента статус ведения мяча
                     if (data.ball && data.ball.dribbler === 'player2') {
                         gameState.ball.dribbler = 'player2';
                     }
@@ -760,8 +861,20 @@
             const canvas = gameState.canvas;
             if (!ctx) return;
 
-            ctx.fillStyle = '#007539';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            // Синий фильтр для Исаги
+            const player = gameState.players[gameState.playerId];
+            if (player && player.auraActive && player.charType === 'Isagi') {
+                ctx.fillStyle = 'rgba(0, 100, 255, 0.15)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+            } else {
+                ctx.fillStyle = '#007539';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+            }
+
+            // Если нет фильтра Исаги, рисуем обычное поле
+            if (!(player && player.auraActive && player.charType === 'Isagi')) {
+                ctx.fillStyle = '#007539';
+            }
 
             ctx.strokeStyle = '#ffffff';
             ctx.lineWidth = 2;
@@ -781,6 +894,64 @@
             ctx.fillStyle = '#e53935';
             ctx.fillRect(canvas.width - 20, goalY1, 20, goalHeight);
 
+            // Отрисовка частиц
+            ctx.save();
+            for (let i = gameState.particles.length - 1; i >= 0; i--) {
+                const p = gameState.particles[i];
+                p.x += p.dx;
+                p.y += p.dy;
+                p.life -= p.decay;
+                p.rotation += p.rotSpeed;
+                
+                if (p.life <= 0) {
+                    gameState.particles.splice(i, 1);
+                    continue;
+                }
+                
+                ctx.save();
+                ctx.translate(p.x, p.y);
+                ctx.rotate(p.rotation);
+                ctx.globalAlpha = p.life;
+                ctx.fillStyle = p.color;
+                ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size);
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+                ctx.lineWidth = 1;
+                ctx.strokeRect(-p.size / 2, -p.size / 2, p.size, p.size);
+                ctx.restore();
+            }
+            ctx.restore();
+
+            // Щит Исаги
+            if (player && player.shieldActive && player.charType === 'Isagi') {
+                const goalSide = gameState.playerId === 'player1' ? 0 : canvas.width;
+                const goalX = gameState.playerId === 'player1' ? 50 : canvas.width - 50;
+                const goalY1 = canvas.height / 2 - 250;
+                const goalY2 = canvas.height / 2 + 250;
+                
+                ctx.save();
+                ctx.strokeStyle = '#00ffff';
+                ctx.lineWidth = 4;
+                ctx.shadowBlur = 25;
+                ctx.shadowColor = '#00ffff';
+                ctx.globalAlpha = 0.6;
+                ctx.beginPath();
+                ctx.moveTo(goalX, goalY1);
+                ctx.lineTo(goalX, goalY2);
+                ctx.stroke();
+                
+                // Щит полукруг
+                ctx.beginPath();
+                if (gameState.playerId === 'player1') {
+                    ctx.arc(goalX, canvas.height / 2, 120, -Math.PI / 2, Math.PI / 2);
+                } else {
+                    ctx.arc(goalX, canvas.height / 2, 120, Math.PI / 2, -Math.PI / 2);
+                }
+                ctx.fillStyle = 'rgba(0, 255, 255, 0.15)';
+                ctx.fill();
+                ctx.stroke();
+                ctx.restore();
+            }
+
             // Боты-вратари
             ctx.fillStyle = gameState.gks.blue.color;
             ctx.beginPath();
@@ -797,7 +968,6 @@
             for (const [id, player] of Object.entries(gameState.players)) {
                 if (!player) continue;
 
-                // Визуальная Аура
                 if (player.auraActive) {
                     ctx.save();
                     ctx.strokeStyle = '#00ffff';
@@ -810,7 +980,6 @@
                     ctx.restore();
                 }
 
-                // Эффект оглушения
                 if (now < player.stunnedUntil) {
                     ctx.strokeStyle = '#ffeb3b';
                     ctx.lineWidth = 3;
@@ -840,7 +1009,7 @@
                 let cdText = (now < player.cdUntil) ? ` [${Math.ceil((player.cdUntil - now) / 1000)}с]` : '';
                 ctx.fillText(CHARACTER_TYPES[player.charType].name + cdText, player.x, player.y - player.radius - 12);
 
-                // --- ЛОКАЛЬНЫЕ ТРАЕКТОРИИ (ВИДИМЫЕ ТОЛЬКО НА ОДНОМ ПК ЛОКАЛЬНО) ---
+                // Локальные траектории
                 if (id === gameState.playerId && player.dribbling && player.auraActive) {
                     if (player.charType === 'Isagi') {
                         ctx.strokeStyle = 'rgba(0, 255, 255, 0.6)';
@@ -895,8 +1064,20 @@
             const opponent = gameState.players[oppId];
 
             updatePlayerPosition(myPlayer);
+            
+            // Проверка подбора мяча
             checkBallPickup(myPlayer, gameState.playerId);
             checkBallPickup(opponent, oppId);
+            
+            // Система отбора мяча
+            if (myPlayer && opponent) {
+                if (opponent.dribbling && !myPlayer.dribbling) {
+                    attemptStealBall(myPlayer, opponent, gameState.playerId, oppId);
+                }
+                if (myPlayer.dribbling && !opponent.dribbling) {
+                    attemptStealBall(opponent, myPlayer, oppId, gameState.playerId);
+                }
+            }
 
             // Синхронизация удержания
             if (gameState.playerId === 'player1' && opponent && opponent.dribbling) {
